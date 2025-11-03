@@ -1,44 +1,36 @@
 {
-  "name": "teaai-frontend",
-  "version": "0.0.0",
+  "name": "waterai-frontend-ssr",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 8116",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build --force",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
-    "format": "prettier --write src/",
-    "openapi": "node src/config/openapi.config.js"
+    "dev": "next dev --port 8116",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "@arco-themes/vue-taolu-publishing-platform": "^0.0.2",
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/nextjs-registry": "^1.2.0",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "antd": "^5.22.5",
     "axios": "^1.7.7",
-    "markd": "^1.2.0",
     "marked": "^16.4.1",
-    "pinia": "^2.1.7",
-    "vue": "^3.4.29",
-    "vue-router": "^4.3.3"
+    "next": "^15.1.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "rehype-raw": "^7.0.0",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@arco-design/web-vue": "^2.56.2",
-    "@rushstack/eslint-patch": "^1.8.0",
-    "@tsconfig/node20": "^20.1.4",
-    "@types/node": "^20.14.5",
-    "@umijs/openapi": "^1.13.0",
-    "@vitejs/plugin-vue": "^5.0.5",
-    "@vue/eslint-config-prettier": "^9.0.0",
-    "@vue/eslint-config-typescript": "^13.0.0",
-    "@vue/tsconfig": "^0.5.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-vue": "^9.23.0",
-    "less": "^4.4.2",
-    "npm-run-all2": "^6.2.0",
-    "prettier": "^3.2.5",
-    "typescript": "~5.4.0",
-    "vite": "^5.3.1",
-    "vue-tsc": "^2.0.21"
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^15.1.4",
+    "typescript": "^5.7.2"
   }
 }

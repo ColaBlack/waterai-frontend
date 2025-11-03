@@ -1,0 +1,189 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 美化滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f6f7;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #7b8ef0 0%, #8a5fb5 100%);
+}
+
+/* Markdown 样式 */
+.markdown-content {
+  line-height: 1.8;
+  color: #333;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown-content > * {
+  margin: 0;
+  padding: 0;
+}
+
+.markdown-content > * + * {
+  margin-top: 0.5em;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.markdown-content h1 {
+  font-size: 28px;
+  border-bottom: 2px solid #e5e6eb;
+  padding-bottom: 8px;
+}
+
+.markdown-content h2 {
+  font-size: 24px;
+  border-bottom: 1px solid #e5e6eb;
+  padding-bottom: 6px;
+}
+
+.markdown-content h3 {
+  font-size: 20px;
+}
+
+.markdown-content p {
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+}
+
+.markdown-content code {
+  background: #f5f6f7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+
+.markdown-content pre {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 24px;
+  margin-bottom: 16px;
+}
+
+.markdown-content li {
+  margin-bottom: 8px;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #667eea;
+  padding-left: 16px;
+  margin: 16px 0;
+  color: #666;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+  border: 1px solid #e5e6eb;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.markdown-content table th {
+  background: #f5f6f7;
+  font-weight: 600;
+}
+
+.markdown-content img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.markdown-content a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid #e5e6eb;
+  margin: 24px 0;
+}
+
+/* 打字机光标闪烁动画 */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.typing-cursor {
+  animation: blink 1s infinite;
+}
+

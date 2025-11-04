@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
 
 export const BASE_URL = '/api'
+export const SSE_BASE_URL = process.env.NEXT_PUBLIC_SSE_BASE_URL || '/api/sse'
 
 const request: AxiosInstance = axios.create({
   baseURL: BASE_URL,

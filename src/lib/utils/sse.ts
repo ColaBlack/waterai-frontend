@@ -30,6 +30,7 @@ export class SSEClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
         },
         body: JSON.stringify(body),
         signal: this.controller.signal,
@@ -63,38 +64,80 @@ export class SSEClient {
         // 将新数据追加到缓冲区
         this.buffer += chunk
         
-        // 按 SSE 标准格式处理：消息以 \n\n 分隔
-        const messages = this.buffer.split('\n\n')
-        
-        // 最后一个可能是不完整的消息，保留在缓冲区
-        this.buffer = messages.pop() || ''
-        
-        // 处理完整的消息
-        for (const message of messages) {
-          if (!message.trim()) continue
-          
-          // 解析消息中的 data: 行
-          const lines = message.split('\n')
-          let dataContent = ''
-          
-          for (const line of lines) {
+        while (true) {
+          const rnIndex = this.buffer.indexOf('\r\n\r\n')
+          const nnIndex = this.buffer.indexOf('\n\n')
+          const rrIndex = this.buffer.indexOf('\r\r')
+
+          let eventEndIndex = -1
+          let delimiterLength = 0
+
+          if (rnIndex !== -1 && (eventEndIndex === -1 || rnIndex < eventEndIndex)) {
+            eventEndIndex = rnIndex
+            delimiterLength = 4
+          }
+
+          if (nnIndex !== -1 && (eventEndIndex === -1 || nnIndex < eventEndIndex)) {
+            eventEndIndex = nnIndex
+            delimiterLength = 2
+          }
+
+          if (rrIndex !== -1 && (eventEndIndex === -1 || rrIndex < eventEndIndex)) {
+            eventEndIndex = rrIndex
+            delimiterLength = 2
+          }
+
+          if (eventEndIndex === -1) {
+            break
+          }
+
+          const rawEvent = this.buffer.slice(0, eventEndIndex)
+          this.buffer = this.buffer.slice(eventEndIndex + delimiterLength)
+
+          if (!rawEvent) {
+            continue
+          }
+
+          const normalizedEvent = rawEvent.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+          const eventLines = normalizedEvent.split('\n')
+          const dataParts: string[] = []
+
+          for (const line of eventLines) {
             if (line.startsWith('data:')) {
-              // 提取 data: 后的内容（兼容有无空格）
-              const content = line.slice(5).trimStart()
-              dataContent += content
+              let value = line.slice(5)
+              if (value.startsWith(' ')) {
+                value = value.slice(1)
+              }
+              dataParts.push(value)
+            } else if (line.startsWith(':')) {
+              // Comment line per SSE spec, ignore
+              continue
+            } else if (line.length > 0) {
+              // 只添加非空行（避免额外的空行干扰）
+              dataParts.push(line)
             }
           }
+
+          // 保留原始内容，不进行额外的trim或过滤
+          const combinedData = dataParts.join('\n')
+
+          if (combinedData.length === 0) {
+            continue
+          }
+
+          // 检查是否为控制消息（如 [DONE]），但不影响空白字符的传递
+          const trimmedForControl = combinedData.trim()
           
-          if (dataContent) {
-            if (dataContent === '[DONE]') {
-              options.onClose?.()
-              this.close()
-              return
-            } else {
-              // 立即回调，不做任何延迟
-              options.onMessage?.(dataContent)
-            }
+          if (trimmedForControl === '[DONE]') {
+            options.onClose?.()
+            this.close()
+            return
           }
+
+          // 即使是纯空白字符（如换行符），也要传递给 onMessage
+          // 不再跳过空白内容，因为换行符对格式很重要
+          options.onMessage?.(combinedData)
         }
       }
     } catch (error: any) {

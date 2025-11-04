@@ -8,6 +8,14 @@ interface StreamingTextProps {
   isStreaming?: boolean
 }
 
+// 配置 marked
+marked.setOptions({
+  breaks: true,        // 支持 GFM 换行符
+  gfm: true,           // 启用 GitHub Flavored Markdown
+  headerIds: false,    // 不生成标题ID
+  mangle: false,       // 不混淆邮箱地址
+})
+
 /**
  * 流式文本显示组件
  * 使用DOM直接操作确保实时更新
@@ -20,16 +28,14 @@ export default function StreamingText({ content, isStreaming = false }: Streamin
   useLayoutEffect(() => {
     if (contentRef.current && content !== lastContentRef.current) {
       try {
-        // 使用marked渲染Markdown
-        const html = marked(content, {
-          breaks: true,
-          gfm: true,
-        }) as string
+        // 使用marked渲染Markdown，保留换行符
+        const html = marked.parse(content) as string
         
         // 直接设置innerHTML，强制浏览器立即渲染
         contentRef.current.innerHTML = html
         lastContentRef.current = content
       } catch (error) {
+        console.error('Markdown parsing error:', error)
         // 降级方案：纯文本 + 换行
         contentRef.current.textContent = content
         lastContentRef.current = content

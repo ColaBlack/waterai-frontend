@@ -4,7 +4,7 @@ import { SSEClient } from '@/lib/utils/sse'
 import { getChatRoomMessages } from '@/lib/api/aiController'
 import { ChatMessage, ModelConfig } from '@/lib/types/chat'
 import { MESSAGE_CONSTANTS, STORAGE_KEYS, API_CONSTANTS } from '@/lib/constants/chat'
-import { BASE_URL } from '@/lib/utils/request'
+import { BASE_URL, SSE_BASE_URL } from '@/lib/utils/request'
 
 // 消息状态类型
 interface MessagesState {
@@ -233,27 +233,31 @@ export function useChatMessages(
       const sseClient = new SSEClient()
       sseClientRef.current = sseClient
 
-      await sseClient.connect(`${BASE_URL}${endpoint}`, requestData, {
-        onMessage: (data: string) => {
-          dispatch({ type: 'APPEND_TO_LAST_AI', payload: data })
-        },
-        onOpen: () => {
-          setIsLoading(false)
-        },
-        onError: (error: Error) => {
-          setIsConnecting(false)
-          setIsLoading(false)
-          dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
-          messageApi.error('连接失败，请稍后重试')
-          saveHistoryMessages(messagesState.messages)
-        },
-        onClose: () => {
-          setIsConnecting(false)
-          setIsLoading(false)
-          dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
-          saveHistoryMessages(messagesState.messages)
+      await sseClient.connect(
+        `${(typeof window !== 'undefined' ? SSE_BASE_URL : BASE_URL)}${endpoint}`,
+        requestData,
+        {
+          onMessage: (data: string) => {
+            dispatch({ type: 'APPEND_TO_LAST_AI', payload: data })
+          },
+          onOpen: () => {
+            setIsLoading(false)
+          },
+          onError: (error: Error) => {
+            setIsConnecting(false)
+            setIsLoading(false)
+            dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
+            messageApi.error('连接失败，请稍后重试')
+            saveHistoryMessages(messagesState.messages)
+          },
+          onClose: () => {
+            setIsConnecting(false)
+            setIsLoading(false)
+            dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
+            saveHistoryMessages(messagesState.messages)
+          },
         }
-      })
+      )
     } catch (error) {
       setIsConnecting(false)
       setIsLoading(false)

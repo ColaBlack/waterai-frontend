@@ -1,16 +1,22 @@
 'use client'
 
 import React, { useEffect, useRef } from 'react'
-import { Empty, Card } from 'antd'
-import { CommentOutlined } from '@ant-design/icons'
 import { ChatMessage } from '@/lib/types/chat'
-import { SAMPLE_QUESTIONS } from '@/lib/constants/chat'
 import MessageItem from './MessageItem'
+import EmptyState from './message/EmptyState'
 
+/**
+ * 消息列表组件
+ * 负责显示聊天消息列表，并处理自动滚动
+ */
 interface MessageListProps {
+  /** 消息列表 */
   messages: ChatMessage[]
+  /** 渲染计数器，用于强制重新渲染 */
   renderCounter?: number
+  /** 是否正在加载 */
   isLoading: boolean
+  /** 使用示例问题回调 */
   onUseSample?: (question: string) => void
 }
 
@@ -45,42 +51,7 @@ export default function MessageList({ messages, renderCounter = 0, isLoading, on
       }}
     >
       {messages.length === 0 && !isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-          <Empty
-            image={<CommentOutlined style={{ fontSize: '64px', color: '#999' }} />}
-            description={
-              <div>
-                <h3>开始新的对话</h3>
-                <p style={{ color: '#999' }}>请输入您的问题，或点击下方示例问题</p>
-              </div>
-            }
-          />
-          
-          {/* 示例问题 */}
-          <div style={{ marginTop: '32px', width: '100%', maxWidth: '600px' }}>
-            <h4 style={{ marginBottom: '16px', textAlign: 'center' }}>💡 示例问题</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '12px' }}>
-              {SAMPLE_QUESTIONS.map((question, index) => (
-                <Card
-                  key={index}
-                  hoverable
-                  size="small"
-                  onClick={() => onUseSample?.(question)}
-                  style={{
-                    cursor: 'pointer',
-                    borderColor: '#e5e6eb',
-                    transition: 'all 0.3s',
-                  }}
-                  styles={{
-                    body: { padding: '12px 16px' }
-                  }}
-                >
-                  {question}
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
+        <EmptyState onUseSample={onUseSample} />
       ) : (
         <>
           {messages.map((msg, index) => (

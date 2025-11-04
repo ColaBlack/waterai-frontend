@@ -128,7 +128,7 @@ export class SSEClient {
 
           // 检查是否为控制消息（如 [DONE]），但不影响空白字符的传递
           const trimmedForControl = combinedData.trim()
-          
+
           if (trimmedForControl === '[DONE]') {
             options.onClose?.()
             this.close()

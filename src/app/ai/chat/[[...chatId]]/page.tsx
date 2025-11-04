@@ -66,12 +66,13 @@ export default function ChatPage() {
 
   // 加载历史消息
   useEffect(() => {
-    if (chatId && chatIdFromParams) {
+    if (chatId && chatIdFromParams && chatId === chatIdFromParams) {
       loadHistoryMessages()
     } else if (!chatIdFromParams) {
       clearMessages()
     }
-  }, [chatIdFromParams, loadHistoryMessages, clearMessages, chatId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatIdFromParams, chatId]) // 只依赖 chatId 和 chatIdFromParams，函数使用 useCallback 已稳定
 
   // 清理
   useEffect(() => {

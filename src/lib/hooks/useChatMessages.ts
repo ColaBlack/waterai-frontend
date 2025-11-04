@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useReducer } from 'react'
+import { useState, useCallback, useRef, useReducer, type MutableRefObject } from 'react'
 import type { MessageInstance } from 'antd/es/message/interface'
 import { SSEClient } from '@/lib/utils/sse'
 import { getChatRoomMessages } from '@/lib/api/aiController'
@@ -19,56 +19,68 @@ type MessagesAction =
   | { type: 'UPDATE_LAST_AI_STREAMING'; payload: boolean }
   | { type: 'CLEAR_MESSAGES' }
 
-// reducer函数：确保每次action都创建新的引用
-function messagesReducer(state: MessagesState, action: MessagesAction): MessagesState {
-  switch (action.type) {
-    case 'SET_MESSAGES':
-      return {
-        messages: action.payload,
-        renderCounter: state.renderCounter + 1
-      }
+// 创建一个可以访问外部 ref 的 reducer 工厂函数
+function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
+  return function messagesReducer(state: MessagesState, action: MessagesAction): MessagesState {
+    let newState: MessagesState
     
-    case 'APPEND_TO_LAST_AI': {
-      const lastIndex = state.messages.length - 1
-      if (lastIndex >= 0 && state.messages[lastIndex].role === 'ai') {
-        const newMessages = [...state.messages]
-        newMessages[lastIndex] = {
-          ...newMessages[lastIndex],
-          content: newMessages[lastIndex].content + action.payload,
-          timestamp: Date.now() // 强制更新时间戳
-        }
-        return {
-          messages: newMessages,
+    switch (action.type) {
+      case 'SET_MESSAGES':
+        newState = {
+          messages: action.payload,
           renderCounter: state.renderCounter + 1
         }
-      }
-      return state
-    }
-    
-    case 'UPDATE_LAST_AI_STREAMING': {
-      const lastIndex = state.messages.length - 1
-      if (lastIndex >= 0 && state.messages[lastIndex].role === 'ai') {
-        const newMessages = [...state.messages]
-        newMessages[lastIndex] = {
-          ...newMessages[lastIndex],
-          isStreaming: action.payload
+        messagesRef.current = action.payload
+        return newState
+      
+      case 'APPEND_TO_LAST_AI': {
+        const lastIndex = state.messages.length - 1
+        if (lastIndex >= 0 && state.messages[lastIndex].role === 'ai') {
+          const newMessages = [...state.messages]
+          newMessages[lastIndex] = {
+            ...newMessages[lastIndex],
+            content: newMessages[lastIndex].content + action.payload,
+            timestamp: Date.now() // 强制更新时间戳
+          }
+          newState = {
+            messages: newMessages,
+            renderCounter: state.renderCounter + 1
+          }
+          messagesRef.current = newMessages
+          return newState
         }
-        return {
-          messages: newMessages,
+        return state
+      }
+      
+      case 'UPDATE_LAST_AI_STREAMING': {
+        const lastIndex = state.messages.length - 1
+        if (lastIndex >= 0 && state.messages[lastIndex].role === 'ai') {
+          const newMessages = [...state.messages]
+          newMessages[lastIndex] = {
+            ...newMessages[lastIndex],
+            isStreaming: action.payload
+          }
+          newState = {
+            messages: newMessages,
+            renderCounter: state.renderCounter + 1
+          }
+          messagesRef.current = newMessages
+          return newState
+        }
+        return state
+      }
+      
+      case 'CLEAR_MESSAGES':
+        newState = {
+          messages: [],
           renderCounter: state.renderCounter + 1
         }
-      }
-      return state
+        messagesRef.current = []
+        return newState
+      
+      default:
+        return state
     }
-    
-    case 'CLEAR_MESSAGES':
-      return {
-        messages: [],
-        renderCounter: state.renderCounter + 1
-      }
-    
-    default:
-      return state
   }
 }
 
@@ -80,7 +92,10 @@ export function useChatMessages(
   messageApi: MessageInstance,
   onFirstMessage?: (prompt: string) => Promise<string | null>
 ) {
-  const [messagesState, dispatch] = useReducer(messagesReducer, {
+  // 使用 ref 保存最新的消息，避免在依赖数组中包含 messagesState.messages
+  const messagesRef = useRef<ChatMessage[]>([])
+  const messagesReducerRef = useRef(createMessagesReducer(messagesRef))
+  const [messagesState, dispatch] = useReducer(messagesReducerRef.current, {
     messages: [],
     renderCounter: 0
   })
@@ -100,11 +115,14 @@ export function useChatMessages(
       if (historyStr) {
         const loadedMessages = JSON.parse(historyStr)
         dispatch({ type: 'SET_MESSAGES', payload: loadedMessages })
+        // messagesRef 会在 reducer 中自动更新
       } else {
         dispatch({ type: 'SET_MESSAGES', payload: [] })
+        // messagesRef 会在 reducer 中自动更新
       }
     } catch (error) {
       dispatch({ type: 'SET_MESSAGES', payload: [] })
+      // messagesRef 会在 reducer 中自动更新
     }
   }, [chatId])
 
@@ -132,6 +150,7 @@ export function useChatMessages(
         })
         
         dispatch({ type: 'SET_MESSAGES', payload: convertedMessages })
+        messagesRef.current = convertedMessages
         saveHistoryMessages(convertedMessages)
         return
       }
@@ -248,13 +267,19 @@ export function useChatMessages(
             setIsLoading(false)
             dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
             messageApi.error('连接失败，请稍后重试')
-            saveHistoryMessages(messagesState.messages)
+            // 使用 ref 获取最新消息，避免依赖闭包
+            setTimeout(() => {
+              saveHistoryMessages(messagesRef.current)
+            }, 0)
           },
           onClose: () => {
             setIsConnecting(false)
             setIsLoading(false)
             dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
-            saveHistoryMessages(messagesState.messages)
+            // 使用 ref 获取最新消息，避免依赖闭包
+            setTimeout(() => {
+              saveHistoryMessages(messagesRef.current)
+            }, 0)
           },
         }
       )
@@ -264,7 +289,7 @@ export function useChatMessages(
       dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
       messageApi.error('发送失败，请稍后重试')
     }
-  }, [chatId, userInput, isConnecting, messagesState.messages, onFirstMessage, saveHistoryMessages, messageApi])
+  }, [chatId, userInput, isConnecting, onFirstMessage, saveHistoryMessages, messageApi])
 
   // 关闭 SSE 连接
   const closeConnection = useCallback(() => {

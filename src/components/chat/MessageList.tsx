@@ -16,13 +16,25 @@ interface MessageListProps {
 
 export default function MessageList({ messages, renderCounter = 0, isLoading, onUseSample }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lastMessageCountRef = useRef<number>(0)
+  const lastRenderCounterRef = useRef<number>(0)
 
-  // 自动滚动到底部
+  // 自动滚动到底部 - 只在消息数量变化或渲染计数器变化时触发
   useEffect(() => {
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    })
-  }, [messages, renderCounter])
+    const messageCount = messages.length
+    const messageCountChanged = messageCount !== lastMessageCountRef.current
+    const renderCounterChanged = renderCounter !== lastRenderCounterRef.current
+    
+    if (messageCountChanged || renderCounterChanged) {
+      lastMessageCountRef.current = messageCount
+      lastRenderCounterRef.current = renderCounter
+      
+      // 使用 requestAnimationFrame 确保 DOM 更新后再滚动
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      })
+    }
+  }, [messages.length, renderCounter])
 
   return (
     <div

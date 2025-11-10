@@ -54,6 +54,7 @@ function MessageItem({ message: chatMessage, renderKey }: MessageItemProps) {
               isUser={isUser}
               isStreaming={chatMessage.isStreaming || false}
               thinkingProcess={parsedContent.thinkingProcess}
+              metadata={chatMessage.metadata}
             />
             <MessageActions
               timestamp={chatMessage.timestamp}

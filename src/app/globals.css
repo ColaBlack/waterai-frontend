@@ -91,7 +91,7 @@ a {
 
 .markdown-content p {
   margin-bottom: 16px;
-  white-space: pre-wrap;
+  /* 不使用 pre-wrap，因为 Markdown 已经将换行符转换为 HTML 标签 */
 }
 
 .markdown-content code {
@@ -121,10 +121,22 @@ a {
 .markdown-content ol {
   margin-left: 24px;
   margin-bottom: 16px;
+  padding-left: 0;
+  list-style-type: disc;
+}
+
+.markdown-content ul ul,
+.markdown-content ol ol,
+.markdown-content ul ol,
+.markdown-content ol ul {
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 
 .markdown-content li {
   margin-bottom: 8px;
+  display: list-item;
+  list-style-position: outside;
 }
 
 .markdown-content blockquote {

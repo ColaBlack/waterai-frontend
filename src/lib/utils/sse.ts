@@ -3,10 +3,24 @@
  * 用于处理服务端推送的流式数据
  */
 
+import type { SSEResponse, AIMessageMetadata } from '@/lib/types/chat'
+
+/** SSE消息数据 */
+export interface SSEMessageData {
+  /** AI回复的文本内容 */
+  text: string
+  /** AI消息的元数据 */
+  metadata?: AIMessageMetadata
+}
+
 export interface SSEOptions {
-  onMessage?: (data: string) => void
+  /** 接收到消息时的回调 */
+  onMessage?: (data: SSEMessageData) => void
+  /** 发生错误时的回调 */
   onError?: (error: Error) => void
+  /** 连接打开时的回调 */
   onOpen?: () => void
+  /** 连接关闭时的回调 */
   onClose?: () => void
 }
 
@@ -14,6 +28,8 @@ export class SSEClient {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null
   private controller: AbortController | null = null
   private buffer: string = '' // 用于缓存不完整的消息
+  private lastReceivedText: string = '' // 跟踪最后接收到的完整文本，用于计算增量
+  private jsonBuffer: string = '' // 用于缓存不完整的JSON对象
 
   /**
    * 连接到SSE端点
@@ -24,6 +40,8 @@ export class SSEClient {
   async connect(url: string, body: any, options: SSEOptions = {}) {
     this.controller = new AbortController()
     this.buffer = '' // 重置缓冲区
+    this.jsonBuffer = '' // 重置JSON缓冲区
+    this.lastReceivedText = '' // 重置最后接收的文本
 
     try {
       const response = await fetch(url, {
@@ -135,14 +153,440 @@ export class SSEClient {
             return
           }
 
-          // 即使是纯空白字符（如换行符），也要传递给 onMessage
-          // 不再跳过空白内容，因为换行符对格式很重要
-          options.onMessage?.(combinedData)
+          // 处理可能包含多个连续JSON对象的数据
+          this.parseMultipleJSONObjects(combinedData, options)
         }
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         options.onError?.(error)
+      }
+    }
+  }
+
+  /**
+   * 解析可能包含多个连续JSON对象的数据
+   * @param data 可能包含多个JSON对象的字符串
+   * @param options 回调选项
+   */
+  private parseMultipleJSONObjects(data: string, options: SSEOptions) {
+    // 将数据追加到JSON缓冲区
+    this.jsonBuffer += data
+    
+    // 尝试解析所有完整的JSON对象
+    while (this.jsonBuffer.length > 0) {
+      let jsonStart = -1
+      let jsonEnd = -1
+      let braceCount = 0
+      
+      // 查找第一个完整的JSON对象
+      for (let i = 0; i < this.jsonBuffer.length; i++) {
+        const char = this.jsonBuffer[i]
+        
+        if (char === '{') {
+          if (jsonStart === -1) {
+            jsonStart = i
+          }
+          braceCount++
+        } else if (char === '}') {
+          braceCount--
+          if (braceCount === 0 && jsonStart !== -1) {
+            jsonEnd = i
+            break
+          }
+        }
+      }
+      
+      // 如果找到了完整的JSON对象
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        const jsonStr = this.jsonBuffer.substring(jsonStart, jsonEnd + 1)
+        this.jsonBuffer = this.jsonBuffer.substring(jsonEnd + 1)
+        
+        try {
+          this.parseSingleJSONObject(jsonStr, options)
+        } catch (error) {
+          console.warn('[SSE] Failed to parse JSON object:', error, 'JSON:', jsonStr.substring(0, 100))
+        }
+      } else {
+        // 没有找到完整的JSON对象，等待更多数据
+        // 但是如果缓冲区太大，可能是数据有问题，清空缓冲区
+        if (this.jsonBuffer.length > 100000) {
+          console.warn('[SSE] JSON buffer too large, clearing:', this.jsonBuffer.length)
+          this.jsonBuffer = ''
+        }
+        break
+      }
+    }
+  }
+
+  /**
+   * 解析单个JSON对象并提取数据
+   * @param jsonStr JSON字符串
+   * @param options 回调选项
+   */
+  private parseSingleJSONObject(jsonStr: string, options: SSEOptions) {
+    let sseResponse: SSEResponse
+    
+    try {
+      sseResponse = JSON.parse(jsonStr)
+    } catch (error) {
+      // JSON解析失败，记录错误但不显示原始JSON，直接返回
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[SSE] Failed to parse JSON:', error, 'JSON preview:', jsonStr.substring(0, 200))
+      }
+      return
+    }
+    
+    // 提取AI回复的文本 - 只从指定的路径提取，绝不显示整个JSON
+    let extractedText = ''
+    
+    // 从SSEResponse中提取文本内容的辅助函数
+    const extractTextFromResponse = (response: SSEResponse): string => {
+      // 路径1: chatResponse.result.output.text
+      if (response.chatResponse?.result?.output?.text !== undefined) {
+        const textValue = response.chatResponse.result.output.text
+        // 移除对单个 '-' 的过滤，因为列表项可能以 '-' 开头
+        // 只检查是否是字符串类型，以及不是完整的 JSON 对象
+        if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
+          // 如果text值看起来像完整的JSON对象字符串，尝试解析
+          const trimmed = textValue.trim()
+          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
+            // 只有看起来像完整 JSON 对象时才尝试解析（长度大于10以避免误判）
+            try {
+              const parsed = JSON.parse(textValue)
+              // 递归提取
+              return extractTextFromResponse(parsed)
+            } catch (e) {
+              // 解析失败，可能是普通文本，直接返回
+              return textValue
+            }
+          }
+          // 普通文本，直接返回（保留所有内容，包括换行符和列表项）
+          return textValue
+        }
+      }
+      
+      // 路径2: chatResponse.results[0].output.text
+      if (response.chatResponse?.results?.[0]?.output?.text !== undefined) {
+        const textValue = response.chatResponse.results[0].output.text
+        if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
+          const trimmed = textValue.trim()
+          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
+            try {
+              const parsed = JSON.parse(textValue)
+              return extractTextFromResponse(parsed)
+            } catch (e) {
+              return textValue
+            }
+          }
+          return textValue
+        }
+      }
+      
+      // 路径3: 直接查找text字段（备用，但不常见）
+      if ((response as any).text !== undefined) {
+        const textValue = (response as any).text
+        if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
+          const trimmed = textValue.trim()
+          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
+            try {
+              const parsed = JSON.parse(textValue)
+              return extractTextFromResponse(parsed)
+            } catch (e) {
+              return textValue
+            }
+          }
+          return textValue
+        }
+      }
+      
+      // 如果所有路径都无法提取有效文本，返回空字符串
+      return ''
+    }
+    
+    // 提取文本内容
+    extractedText = extractTextFromResponse(sseResponse)
+    
+    // 确保 extractedText 是字符串
+    if (typeof extractedText !== 'string') {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[SSE] extractedText is not a string:', typeof extractedText, extractedText)
+      }
+      extractedText = ''
+    }
+    
+    // 开发环境调试：记录提取的文本
+    if (process.env.NODE_ENV === 'development') {
+      const resultText = sseResponse.chatResponse?.result?.output?.text
+      const resultsText = sseResponse.chatResponse?.results?.[0]?.output?.text
+      console.log('[SSE] Extracted text:', {
+        extractedText: typeof extractedText === 'string' ? extractedText.substring(0, 100) : String(extractedText),
+        extractedTextType: typeof extractedText,
+        isJSON: typeof extractedText === 'string' && extractedText.trim().startsWith('{'),
+        hasChatResponse: !!sseResponse.chatResponse,
+        hasResult: !!sseResponse.chatResponse?.result,
+        hasResults: !!sseResponse.chatResponse?.results,
+        resultTextType: typeof resultText,
+        resultText: typeof resultText === 'string' ? resultText.substring(0, 50) : String(resultText),
+        resultsTextType: typeof resultsText,
+        resultsText: typeof resultsText === 'string' ? resultsText.substring(0, 50) : String(resultsText)
+      })
+    }
+    
+    // 最终检查：确保提取的文本不是JSON字符串
+    if (extractedText && typeof extractedText === 'string') {
+      const trimmed = extractedText.trim()
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        // 提取的文本仍然是JSON，尝试最后一次解析
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[SSE] Extracted text is still JSON, attempting final parse:', trimmed.substring(0, 100))
+        }
+        try {
+          const parsed = JSON.parse(extractedText)
+          const finalText = extractTextFromResponse(parsed)
+          if (finalText && typeof finalText === 'string' && finalText.trim().startsWith('{')) {
+            // 最终还是JSON，清空文本
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[SSE] Final extracted text is still JSON, clearing:', finalText.substring(0, 100))
+            }
+            extractedText = ''
+          } else {
+            extractedText = (typeof finalText === 'string' ? finalText : '') || ''
+          }
+        } catch (e) {
+          // 解析失败，清空文本（绝不显示JSON）
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[SSE] Failed to parse extracted JSON, clearing text')
+          }
+          extractedText = ''
+        }
+      }
+    } else if (extractedText && typeof extractedText !== 'string') {
+      // 如果不是字符串，清空
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[SSE] extractedText is not a string after final check, clearing:', typeof extractedText)
+      }
+      extractedText = ''
+    }
+    
+    // 使用提取的文本作为当前文本，确保是字符串类型
+    let currentText = ''
+    if (extractedText !== undefined && extractedText !== null) {
+      if (typeof extractedText === 'string') {
+        currentText = extractedText
+      } else if (typeof extractedText === 'object') {
+        // 如果是对象，不处理（避免显示 [object Object]）
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[SSE] extractedText is an object, ignoring it:', extractedText)
+        }
+        currentText = ''
+      } else {
+        currentText = String(extractedText)
+      }
+    }
+    
+    // 确保 currentText 是字符串
+    currentText = typeof currentText === 'string' ? currentText : ''
+    
+    // 根据用户提供的示例，后端发送的text字段是增量文本片段
+    // 例如：第一个JSON是"<th"，第二个是"ink"，第三个是">\n好的"
+    // 我们需要将这些片段组合起来并实时显示
+    let textIncrement = ''
+    
+    // 检查是否有有效的文本内容（排除空字符串和JSON字符串）
+    // 注意：不排除单独的 '-'，因为列表项可能以 '-' 开头
+    const hasValidText = currentText && 
+                        typeof currentText === 'string' &&
+                        currentText !== '' && 
+                        !(currentText.trim().startsWith('{') && currentText.trim().endsWith('}') && currentText.trim().length > 10)
+    
+    if (hasValidText) {
+      if (this.lastReceivedText === '') {
+        // 第一次接收到文本，直接使用
+        textIncrement = currentText
+        this.lastReceivedText = currentText
+      } else {
+        // 判断文本格式：累积文本 vs 增量文本
+        // 情况1: 累积文本 - 当前文本包含所有之前的文本（长度更长且以之前文本开头）
+        if (currentText.length > this.lastReceivedText.length && 
+            currentText.startsWith(this.lastReceivedText)) {
+          // 累积文本：提取增量部分
+          textIncrement = currentText.substring(this.lastReceivedText.length)
+          this.lastReceivedText = currentText
+        }
+        // 情况2: 增量文本 - 当前文本是新增的片段（不包含之前的文本）
+        else if (currentText !== this.lastReceivedText) {
+          // 增量文本：直接使用，并累积到lastReceivedText
+          textIncrement = currentText
+          this.lastReceivedText += currentText
+        }
+        // 情况3: 文本相同，可能是重复发送，跳过
+        else {
+          textIncrement = ''
+        }
+      }
+    }
+    // 如果没有text字段（undefined/null），textIncrement保持为空字符串
+    
+    // 提取元数据
+    const metadata: AIMessageMetadata = {}
+    
+    // 提取工具调用信息
+    const toolCalls = sseResponse.chatResponse?.result?.output?.toolCalls || 
+                     sseResponse.chatResponse?.results?.[0]?.output?.toolCalls
+    if (toolCalls && toolCalls.length > 0) {
+      metadata.toolCalls = toolCalls.map((tc: any) => {
+        // 判断工具调用状态
+        // 优先级：failed > completed > calling > pending
+        let status: 'pending' | 'calling' | 'completed' | 'failed' = 'pending'
+        
+        if (tc.error || tc.status === 'failed') {
+          status = 'failed'
+        } else if (tc.result !== undefined && tc.result !== null) {
+          status = 'completed'
+        } else if (tc.status === 'calling' || tc.status === 'running') {
+          status = 'calling'
+        } else if (tc.status === 'completed' || tc.status === 'success') {
+          status = 'completed'
+        } else if (tc.name || tc.function?.name) {
+          // 如果有名称和参数但没有结果，通常表示正在调用
+          // 但如果也没有参数，可能是pending状态
+          status = (tc.arguments || tc.function?.arguments) ? 'calling' : 'pending'
+        }
+        
+        // 提取工具名称
+        const toolName = tc.name || tc.function?.name || tc.toolName || 'unknown'
+        
+        // 提取参数
+        let toolArgs = ''
+        if (tc.arguments) {
+          toolArgs = typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments, null, 2)
+        } else if (tc.function?.arguments) {
+          toolArgs = typeof tc.function.arguments === 'string' ? tc.function.arguments : JSON.stringify(tc.function.arguments, null, 2)
+        } else if (tc.input) {
+          toolArgs = typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input, null, 2)
+        }
+        
+        // 提取结果
+        let toolResult: string | undefined = undefined
+        if (tc.result !== undefined && tc.result !== null) {
+          toolResult = typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result, null, 2)
+        } else if (tc.output !== undefined && tc.output !== null) {
+          toolResult = typeof tc.output === 'string' ? tc.output : JSON.stringify(tc.output, null, 2)
+        }
+        
+        // 提取错误信息
+        const errorMsg = tc.error || tc.errorMessage || tc.err || undefined
+        
+        return {
+          id: tc.id || tc.callId || tc.toolCallId,
+          name: toolName,
+          arguments: toolArgs,
+          result: toolResult,
+          status,
+          error: errorMsg
+        }
+      })
+    }
+    
+    // 提取RAG检索文档
+    const retrievedDocs = sseResponse.context?.qa_retrieved_documents
+    if (retrievedDocs && retrievedDocs.length > 0) {
+      metadata.retrievedDocuments = retrievedDocs.map(doc => ({
+        id: doc.id,
+        content: doc.content || '',
+        score: doc.score,
+        source: doc.source
+      }))
+    }
+    
+    // 提取其他元数据
+    const chatMetadata = sseResponse.chatResponse?.metadata
+    if (chatMetadata) {
+      metadata.modelId = chatMetadata.model
+      metadata.finishReason = sseResponse.chatResponse?.result?.metadata?.finishReason
+      
+      if (chatMetadata.usage) {
+        metadata.usage = {
+          promptTokens: chatMetadata.usage.promptTokens,
+          completionTokens: chatMetadata.usage.completionTokens,
+          totalTokens: chatMetadata.usage.totalTokens
+        }
+      }
+    }
+    
+    // 只要有文本增量或元数据，就调用回调
+    // 注意：即使textIncrement为空字符串，如果metadata有更新（如工具调用状态变化），也应该发送
+    const hasMetadata = Object.keys(metadata).length > 0
+    
+    // 确保 textIncrement 是字符串类型
+    if (textIncrement !== undefined && textIncrement !== null && typeof textIncrement !== 'string') {
+      // 如果不是字符串，转换为字符串或清空
+      if (typeof textIncrement === 'object') {
+        // 对象不能直接转换为文本，清空
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[SSE] textIncrement is an object, clearing it:', textIncrement)
+        }
+        textIncrement = ''
+      } else {
+        textIncrement = String(textIncrement)
+      }
+    }
+    
+    // 确保 textIncrement 是字符串
+    const textIncrementStr = typeof textIncrement === 'string' ? textIncrement : ''
+    
+    // 只有当textIncrement有实际内容时才认为有文本增量（过滤掉空字符串和JSON字符串）
+    // 注意：不再过滤单独的 '-'，因为列表项可能以 '-' 开头
+    const hasTextIncrement = textIncrementStr !== undefined && 
+                             textIncrementStr !== null && 
+                             textIncrementStr !== '' && 
+                             typeof textIncrementStr === 'string' &&
+                             !(textIncrementStr.trim().startsWith('{') && textIncrementStr.trim().endsWith('}'))
+    
+    // 最终安全检查：确保safeText不是JSON字符串，且确保是字符串类型
+    let safeText = ''
+    if (hasTextIncrement) {
+      // 使用已经确保是字符串的 textIncrementStr
+      const trimmed = textIncrementStr.trim()
+      // 如果看起来像JSON字符串，绝不传递
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[SSE] Blocked JSON string from being displayed:', trimmed.substring(0, 100))
+        }
+        safeText = ''
+      } else {
+        safeText = textIncrementStr
+      }
+    }
+    
+    // 确保 safeText 始终是字符串
+    safeText = typeof safeText === 'string' ? safeText : ''
+    
+    // 只有在有有效文本增量或元数据时才调用回调
+    // 重要：如果safeText为空，即使有元数据，也要确保不会传递任何JSON字符串
+    if (safeText || hasMetadata) {
+      options.onMessage?.({
+        text: String(safeText), // 强制转换为字符串，确保绝对不是对象
+        metadata: hasMetadata ? metadata : undefined
+      })
+      
+      // 开发环境下输出调试信息
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SSE] Parsed JSON object:', { 
+          textIncrement: safeText ? safeText.substring(0, 100) : '(empty)',
+          textIncrementLength: safeText?.length || 0,
+          totalTextLength: this.lastReceivedText.length,
+          totalTextPreview: this.lastReceivedText.substring(0, 100),
+          hasMetadata,
+          metadataKeys: Object.keys(metadata),
+          originalTextWasJSON: textIncrement && textIncrement.trim().startsWith('{')
+        })
+      }
+    } else {
+      // 如果没有有效文本也没有元数据，记录但不传递任何内容
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SSE] No valid text or metadata extracted from JSON, skipping message')
       }
     }
   }
@@ -159,6 +603,9 @@ export class SSEClient {
       this.controller.abort()
       this.controller = null
     }
+    // 重置状态
+    this.jsonBuffer = ''
+    this.lastReceivedText = ''
   }
 }
 

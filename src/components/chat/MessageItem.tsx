@@ -8,22 +8,15 @@ import AvatarBadge from './message/AvatarBadge'
 import MessageContent from './message/MessageContent'
 import MessageActions from './message/MessageActions'
 
-/**
- * 消息项组件
- * 显示单条聊天消息，包括头像、内容和操作
- */
 interface MessageItemProps {
-  /** 消息对象 */
   message: ChatMessage
-  /** 渲染键值，用于强制重新渲染 */
   renderKey?: string
 }
 
-function MessageItem({ message: chatMessage, renderKey }: MessageItemProps) {
+export default function MessageItem({ message: chatMessage, renderKey }: MessageItemProps) {
   const [messageApi, contextHolder] = message.useMessage()
   const isUser = chatMessage.role === 'user'
-  
-  // 解析消息内容，提取思考过程和正常内容
+
   const parsedContent = parseMessageContent(chatMessage.content)
   const contentToRender = isUser ? chatMessage.content : (parsedContent.normalContent || '')
 
@@ -46,7 +39,12 @@ function MessageItem({ message: chatMessage, renderKey }: MessageItemProps) {
           marginBottom: '16px',
         }}
       >
-        <div style={{ maxWidth: '80%', display: 'flex', gap: '12px', flexDirection: isUser ? 'row-reverse' : 'row' }}>
+        <div style={{
+          maxWidth: '80%',
+          display: 'flex',
+          gap: '12px',
+          flexDirection: isUser ? 'row-reverse' : 'row',
+        }}>
           <AvatarBadge isUser={isUser} />
           <div style={{ flex: 1 }}>
             <MessageContent
@@ -70,6 +68,3 @@ function MessageItem({ message: chatMessage, renderKey }: MessageItemProps) {
     </>
   )
 }
-
-export default MessageItem
-

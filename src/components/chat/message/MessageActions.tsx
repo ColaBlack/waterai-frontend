@@ -4,23 +4,14 @@ import React from 'react'
 import { Button } from 'antd'
 import { CopyOutlined } from '@ant-design/icons'
 import { formatTimestamp } from '@/lib/utils/messageParser'
+import { colors } from './styles'
 
-/**
- * 消息操作栏组件
- * 显示时间戳和操作按钮（如复制）
- */
 interface MessageActionsProps {
-  /** 消息时间戳 */
   timestamp: number
-  /** 是否为用户消息 */
   isUser: boolean
-  /** 是否正在流式输出 */
   isStreaming: boolean
-  /** 复制内容 */
   content: string
-  /** 复制成功回调 */
   onCopySuccess?: () => void
-  /** 复制失败回调 */
   onCopyError?: () => void
 }
 
@@ -49,7 +40,7 @@ export default function MessageActions({
         gap: '8px',
         marginTop: '4px',
         fontSize: '12px',
-        color: '#999',
+        color: colors.text.disabled,
         paddingLeft: isUser ? '0' : '8px',
         paddingRight: isUser ? '8px' : '0',
         justifyContent: isUser ? 'flex-end' : 'flex-start',
@@ -70,4 +61,3 @@ export default function MessageActions({
     </div>
   )
 }
-

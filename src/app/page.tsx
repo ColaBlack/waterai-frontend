@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import { Button, Card, Space, Typography } from 'antd'
+import { Button, Card, Row, Col, Space, Typography } from 'antd'
 import { CommentOutlined, TeamOutlined, SafetyOutlined, RocketOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import GlobalLayout from '@/components/GlobalLayout'
@@ -96,39 +96,44 @@ export default function HomePage() {
         <Title level={2} style={{ textAlign: 'center', marginBottom: '48px' }}>
           平台功能
         </Title>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '24px',
-          }}
-        >
+        <Row gutter={[24, 24]} justify="center">
           {features.map((feature, index) => {
             const hasAccess = checkAccess(loginUser, feature.needAuth)
             return (
-              <Card
+              <Col
                 key={index}
-                hoverable={hasAccess}
-                style={{
-                  textAlign: 'center',
-                  opacity: hasAccess ? 1 : 0.6,
-                }}
-                onClick={() => hasAccess && feature.action()}
+                xs={24}
+                sm={12}
+                md={12}
+                lg={6}
+                xl={6}
+                xxl={6}
               >
-                <div style={{ marginBottom: '16px' }}>{feature.icon}</div>
-                <Title level={4}>{feature.title}</Title>
-                <Paragraph style={{ color: '#666' }}>
-                  {feature.description}
-                </Paragraph>
-                {!hasAccess && feature.needAuth !== ROLE_ENUM.PUBLIC && (
-                  <Paragraph type="secondary" style={{ fontSize: '12px' }}>
-                    需要{feature.needAuth === ROLE_ENUM.ADMIN ? '管理员' : '登录'}权限
+                <Card
+                  hoverable={hasAccess}
+                  style={{
+                    textAlign: 'center',
+                    opacity: hasAccess ? 1 : 0.6,
+                    height: '100%',
+                    cursor: hasAccess ? 'pointer' : 'not-allowed',
+                  }}
+                  onClick={() => hasAccess && feature.action()}
+                >
+                  <div style={{ marginBottom: '16px' }}>{feature.icon}</div>
+                  <Title level={4}>{feature.title}</Title>
+                  <Paragraph style={{ color: '#666', minHeight: '48px' }}>
+                    {feature.description}
                   </Paragraph>
-                )}
-              </Card>
+                  {!hasAccess && feature.needAuth !== ROLE_ENUM.PUBLIC && (
+                    <Paragraph type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>
+                      需要{feature.needAuth === ROLE_ENUM.ADMIN ? '管理员' : '登录'}权限
+                    </Paragraph>
+                  )}
+                </Card>
+              </Col>
             )
           })}
-        </div>
+        </Row>
       </div>
 
       {/* About Section */}

@@ -22,7 +22,22 @@ export default function LoginPage() {
     try {
       const res = await userLogin(values)
       if (res.data.code === 200) {
+        const { token, id, userName, userAvatar, userRole } = res.data.data || {}
+        
+        // 保存JWT token和用户信息到localStorage
+        if (token) {
+          localStorage.setItem('token', token)
+        }
+        if (id) {
+          localStorage.setItem('userId', String(id))
+        }
+        if (userName) {
+          localStorage.setItem('userName', userName)
+        }
+        
+        // 更新用户状态
         await fetchLoginUser()
+        
         message.success('登录成功！即将跳转')
         router.push(redirect || '/')
       } else {

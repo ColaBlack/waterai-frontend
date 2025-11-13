@@ -11,6 +11,8 @@ export interface SSEMessageData {
   text: string
   /** AI消息的元数据 */
   metadata?: AIMessageMetadata
+  /** AI思考过程（从<think></think>标签中提取） */
+  thinkingProcess?: string
 }
 
 export interface SSEOptions {
@@ -44,15 +46,32 @@ export class SSEClient {
     this.lastReceivedText = '' // 重置最后接收的文本
 
     try {
+      // 准备请求头
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      }
+      
+      // 添加JWT token到Authorization header（仅在客户端环境）
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token')
+        console.log('[SSE] Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+          console.log('[SSE] Added Authorization header:', `Bearer ${token.substring(0, 20)}...`)
+        } else {
+          console.warn('[SSE] No token found in localStorage')
+        }
+      } else {
+        console.warn('[SSE] Running in server environment, no token added')
+      }
+      
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
+        headers: headers,
         body: JSON.stringify(body),
         signal: this.controller.signal,
-        credentials: 'include',
+        // 不再需要 credentials: 'include'，JWT通过Authorization header传递
       })
 
       if (!response.ok) {
@@ -255,7 +274,45 @@ export class SSEClient {
     
     // 从SSEResponse中提取文本内容的辅助函数
     const extractTextFromResponse = (response: SSEResponse): string => {
-      // 路径1: chatResponse.result.output.text
+      // 路径0: 直接的 result.output.text（后端实际格式）
+      if ((response as any).result?.output?.text !== undefined) {
+        const textValue = (response as any).result.output.text
+        if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
+          // 如果text值看起来像完整的JSON对象字符串，尝试解析
+          const trimmed = textValue.trim()
+          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
+            try {
+              const parsed = JSON.parse(textValue)
+              // 递归提取
+              return extractTextFromResponse(parsed)
+            } catch (e) {
+              // 解析失败，可能是普通文本，直接返回
+              return textValue
+            }
+          }
+          // 普通文本，直接返回（保留所有内容，包括换行符和列表项）
+          return textValue
+        }
+      }
+
+      // 路径0.1: 直接的 results[0].output.text（后端实际格式）
+      if ((response as any).results?.[0]?.output?.text !== undefined) {
+        const textValue = (response as any).results[0].output.text
+        if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
+          const trimmed = textValue.trim()
+          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
+            try {
+              const parsed = JSON.parse(textValue)
+              return extractTextFromResponse(parsed)
+            } catch (e) {
+              return textValue
+            }
+          }
+          return textValue
+        }
+      }
+      
+      // 路径1: chatResponse.result.output.text（原有格式，保持兼容）
       if (response.chatResponse?.result?.output?.text !== undefined) {
         const textValue = response.chatResponse.result.output.text
         // 移除对单个 '-' 的过滤，因为列表项可能以 '-' 开头
@@ -445,7 +502,9 @@ export class SSEClient {
     const metadata: AIMessageMetadata = {}
     
     // 提取工具调用信息
-    const toolCalls = sseResponse.chatResponse?.result?.output?.toolCalls || 
+    const toolCalls = (sseResponse as any).result?.output?.toolCalls || 
+                     (sseResponse as any).results?.[0]?.output?.toolCalls ||
+                     sseResponse.chatResponse?.result?.output?.toolCalls || 
                      sseResponse.chatResponse?.results?.[0]?.output?.toolCalls
     if (toolCalls && toolCalls.length > 0) {
       metadata.toolCalls = toolCalls.map((tc: any) => {
@@ -576,11 +635,30 @@ export class SSEClient {
     // 确保 safeText 始终是字符串
     safeText = typeof safeText === 'string' ? safeText : ''
     
+    // 处理思考过程：从完整文本中提取 <think></think> 标签内容
+    let thinkingProcess = ''
+    let displayText = safeText
+    
+    if (safeText) {
+      // 检查是否包含 <think> 标签
+      const thinkRegex = /<think>([\s\S]*?)<\/think>/g
+      const matches = [...this.lastReceivedText.matchAll(thinkRegex)]
+      
+      if (matches.length > 0) {
+        // 提取所有思考过程内容
+        thinkingProcess = matches.map(match => match[1]).join('\n\n')
+        
+        // 从显示文本中移除 <think></think> 标签及其内容
+        displayText = safeText.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+      }
+    }
+    
     // 只有在有有效文本增量或元数据时才调用回调
-    // 重要：如果safeText为空，即使有元数据，也要确保不会传递任何JSON字符串
-    if (safeText || hasMetadata) {
+    // 重要：如果displayText为空，即使有元数据，也要确保不会传递任何JSON字符串
+    if (displayText || hasMetadata || thinkingProcess) {
       options.onMessage?.({
-        text: String(safeText), // 强制转换为字符串，确保绝对不是对象
+        text: String(displayText), // 强制转换为字符串，确保绝对不是对象
+        thinkingProcess: thinkingProcess || undefined,
         metadata: hasMetadata ? metadata : undefined
       })
       

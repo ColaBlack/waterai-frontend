@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { message as antdMessage } from 'antd'
 import { listChatRooms, createChatRoom as apiCreateChatRoom } from '@/api/chatService/chatRoomController'
 import { API_CONSTANTS, TIME_CONSTANTS } from '@/lib/constants/chat'
 import { useUserStore } from '@/lib/store/userStore'
@@ -17,7 +16,7 @@ export function generateChatId(): string {
 /**
  * 聊天室管理 Hook
  */
-export function useChatRoom() {
+export function useChatRoom(messageApi?: any) {
   const router = useRouter()
   const { loginUser } = useUserStore()
   const [chatId, setChatId] = useState('')
@@ -74,10 +73,10 @@ export function useChatRoom() {
           setChatRoomList([])
         }
       } else {
-        antdMessage.error(`加载聊天记录失败: HTTP ${response.status}`)
+        messageApi?.error(`加载聊天记录失败: HTTP ${response.status}`)
       }
     } catch (error: any) {
-      antdMessage.error('加载聊天记录失败，请检查网络连接')
+      messageApi?.error('加载聊天记录失败，请检查网络连接')
     } finally {
       setLoadingHistory(false)
     }
@@ -87,7 +86,7 @@ export function useChatRoom() {
   const createChatRoom = useCallback(async (userPrompt: string): Promise<string | null> => {
     if (!loginUser.id) {
       // 如果用户未登录，无法创建聊天室
-      antdMessage.warning('用户未登录，无法创建聊天室')
+      messageApi?.warning('用户未登录，无法创建聊天室')
       return null
     }
 
@@ -117,11 +116,11 @@ export function useChatRoom() {
           return null
         }
       } else {
-        antdMessage.warning('聊天室创建失败，但可以继续对话')
+        messageApi?.warning('聊天室创建失败，但可以继续对话')
         return null
       }
     } catch (error: any) {
-      antdMessage.warning('聊天室创建失败，但可以继续对话')
+      messageApi?.warning('聊天室创建失败，但可以继续对话')
       return null
     }
   }, [chatId, loginUser.id, loadChatRoomList, router])

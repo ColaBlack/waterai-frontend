@@ -9,22 +9,23 @@ export function checkAccess(
   loginUser: API.LoginUserVO | null,
   needAccess: RoleType = ROLE_ENUM.PUBLIC
 ): boolean {
-  // 获取当前用户权限
-  const loginUserRole = (loginUser?.userRole || ROLE_ENUM.PUBLIC) as RoleType
-
-  // 如果不需要权限，则通过
+  // 如果不需要权限（公开访问），则通过
   if (needAccess === ROLE_ENUM.PUBLIC) {
     return true
   }
 
+  // 检查是否已登录（通过JWT token）
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const isLoggedIn = !!token
+
   // 如果需要用户权限
   if (needAccess === ROLE_ENUM.USER) {
     // 如果未登录，则拒绝
-    if (loginUserRole === ROLE_ENUM.PUBLIC) {
+    if (!isLoggedIn) {
       return false
     }
     // 如果被封禁，则拒绝
-    if (loginUserRole === ROLE_ENUM.BAN) {
+    if (loginUser?.userRole === 'ban') {
       return false
     }
     return true
@@ -32,8 +33,8 @@ export function checkAccess(
 
   // 如果需要管理员权限
   if (needAccess === ROLE_ENUM.ADMIN) {
-    // 只有管理员才能访问
-    return loginUserRole === ROLE_ENUM.ADMIN
+    // 必须已登录且是管理员
+    return isLoggedIn && loginUser?.userRole === 'admin'
   }
 
   return true

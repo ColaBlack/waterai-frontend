@@ -24,7 +24,8 @@ declare namespace API {
   };
 
   type DeleteRequest = {
-    id?: number;
+    /** 要删除的记录ID */
+    id: number;
   };
 
   type LoginUserVO = {
@@ -38,6 +39,10 @@ declare namespace API {
     userProfile?: string;
     /** 用户角色 */
     userRole?: "user" | "admin" | "ban";
+    /** 用户账号 */
+    userAccount?: string;
+    /** JWT认证token */
+    token?: string;
     /** 账号创建时间 */
     createTime?: string;
     /** 账号更新时间 */

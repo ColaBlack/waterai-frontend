@@ -4,6 +4,8 @@ declare namespace API {
     userPrompt: string;
     /** 会话ID，用于多轮对话 */
     chatId: string;
+    /** 聊天室ID，用于标识聊天室 */
+    chatRoomId?: string;
     /** 文本模型名称 */
     modelName?: "glm-z1-flash" | "glm-4.5-flash" | "glm-4-flash";
     /** 是否启用联网搜索 */

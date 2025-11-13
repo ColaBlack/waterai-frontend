@@ -55,7 +55,7 @@ export async function listUserByPage(
   });
 }
 
-/** 用户登录 验证用户账号密码，登录成功后返回用户信息并设置登录状态 POST /user/login */
+/** 用户登录 验证用户账号密码，登录成功后返回用户信息和JWT token POST /user/login */
 export async function userLogin(
   body: API.UserLoginRequest,
   options?: { [key: string]: any }

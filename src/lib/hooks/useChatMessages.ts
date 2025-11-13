@@ -3,7 +3,7 @@ import type { MessageInstance } from 'antd/es/message/interface'
 import { SSEClient } from '@/lib/utils/sse'
 import { getChatRoomMessages } from '@/api/chatService/chatRoomController'
 import { ChatMessage, ModelConfig } from '@/lib/types/chat'
-import { MESSAGE_CONSTANTS, STORAGE_KEYS, API_CONSTANTS } from '@/lib/constants/chat'
+import { MESSAGE_CONSTANTS, STORAGE_KEYS, API_CONSTANTS, TIME_CONSTANTS } from '@/lib/constants/chat'
 import { BASE_URL } from '@/lib/utils/request'
 import { useUserStore } from '@/lib/store/userStore'
 
@@ -239,6 +239,8 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
             ...currentMessage,
             content: newContent,
             metadata: Object.keys(newMetadata).length > 0 ? newMetadata : undefined,
+            // 更新思考过程
+            thinkingProcess: action.payload.thinkingProcess || currentMessage.thinkingProcess,
             // 只有在内容变化时才更新时间戳
             timestamp: contentChanged ? Date.now() : currentMessage.timestamp
           }
@@ -286,7 +288,8 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
 export function useChatMessages(
   chatId: string,
   messageApi: MessageInstance,
-  onFirstMessage?: (prompt: string) => Promise<string | null>
+  onFirstMessage?: (prompt: string) => Promise<string | null>,
+  onMessageSent?: () => void // 消息发送完成后的回调（用于刷新聊天室列表等）
 ) {
   const { loginUser } = useUserStore()
   // 使用 ref 保存最新的消息，避免在依赖数组中包含 messagesState.messages
@@ -305,6 +308,12 @@ export function useChatMessages(
   // 从 localStorage 加载历史消息
   const loadHistoryMessagesFromLocal = useCallback(() => {
     if (!chatId) return
+
+    // 检查是否在客户端环境（避免SSR错误）
+    if (typeof window === 'undefined') {
+      dispatch({ type: 'SET_MESSAGES', payload: [] })
+      return
+    }
 
     try {
       const historyKey = `${STORAGE_KEYS.CHAT_HISTORY_PREFIX}${chatId}`
@@ -334,7 +343,16 @@ export function useChatMessages(
       return
     }
 
-    if (!loginUser.id) {
+    // 检查JWT token和用户ID（仅在客户端环境）
+    if (typeof window === 'undefined') {
+      // 服务端渲染时不加载历史消息
+      return
+    }
+    
+    const token = localStorage.getItem('token')
+    const userId = localStorage.getItem('userId')
+    
+    if (!token || !userId) {
       // 如果用户未登录，不加载历史消息
       loadHistoryMessagesFromLocal()
       return
@@ -343,7 +361,7 @@ export function useChatMessages(
     try {
       const response = await getChatRoomMessages({ 
         chatroomId: chatId, 
-        userId: loginUser.id as number 
+        userId: parseInt(userId) 
       } as API.getChatRoomMessagesParams)
       
       if (response.status === 200 && response.data.code === API_CONSTANTS.SUCCESS_CODE) {
@@ -418,11 +436,14 @@ export function useChatMessages(
     if (!isSendingFirstMessageRef.current) {
     loadHistoryMessagesFromLocal()
     }
-  }, [chatId, loginUser.id, loadHistoryMessagesFromLocal])
+  }, [chatId, loadHistoryMessagesFromLocal])
 
   // 保存消息到 localStorage
   const saveHistoryMessages = useCallback((msgs: ChatMessage[]) => {
     if (!chatId) return
+
+    // 检查是否在客户端环境（避免SSR错误）
+    if (typeof window === 'undefined') return
 
     try {
       const historyKey = `${STORAGE_KEYS.CHAT_HISTORY_PREFIX}${chatId}`
@@ -440,13 +461,17 @@ export function useChatMessages(
       return
     }
 
-    // 检查用户是否登录
-    if (!loginUser.id) {
+    // 检查用户是否登录（检查JWT token）
+    if (typeof window === 'undefined') {
+      // 服务端渲染时不执行发送消息
+      return
+    }
+    
+    const token = localStorage.getItem('token')
+    if (!token) {
       messageApi.error('请先登录后再发送消息')
       // 跳转到登录页面
-      if (typeof window !== 'undefined') {
-        window.location.href = '/user/login?redirect=' + encodeURIComponent(window.location.href)
-      }
+      window.location.href = '/user/login?redirect=' + encodeURIComponent(window.location.href)
       return
     }
 
@@ -468,15 +493,23 @@ export function useChatMessages(
       isSendingFirstMessageRef.current = true
     }
     
+    // 如果后端支持自动创建聊天室，不再需要预先创建
+    // 直接使用当前的 chatId，后端会自动创建（如果不存在）
+    // 保留 onFirstMessage 逻辑作为可选的回调（用于更新 URL 等）
     if (isFirstMessage && onFirstMessage) {
-      const newChatId = await onFirstMessage(prompt)
-      if (newChatId) {
-        actualChatId = newChatId
-      } else {
-        // 如果创建聊天室失败，停止发送消息
-        isSendingFirstMessageRef.current = false
-        messageApi.error('创建聊天室失败，请稍后重试')
-        return
+      // 不再需要预先创建聊天室，后端会自动创建
+      // 但保留回调逻辑，以便后续可能需要的处理
+      try {
+        const newChatId = await onFirstMessage(prompt)
+        if (newChatId) {
+          actualChatId = newChatId
+        }
+        // 如果 onFirstMessage 返回 null 或失败，仍然继续发送消息
+        // 因为后端会自动创建聊天室
+      } catch (error) {
+        // 即使 onFirstMessage 失败，也继续发送消息
+        // 因为后端会自动创建聊天室
+        console.warn('onFirstMessage failed, but continuing with message send:', error)
       }
     }
 
@@ -513,6 +546,7 @@ export function useChatMessages(
         requestData = {
           userPrompt: prompt,
           chatId: actualChatId,
+          chatRoomId: actualChatId, // 聊天室编号，如果不存在则后端自动创建
           imageUrls: config.imageUrls || [],
           visionModelType: config.model === 'vision' ? 'vision' : 'vision_reasoning'
         }
@@ -521,6 +555,7 @@ export function useChatMessages(
         requestData = {
           userPrompt: prompt,
           chatId: actualChatId,
+          chatRoomId: actualChatId, // 聊天室编号，如果不存在则后端自动创建
           modelName: config.model,
           useWebSearch: config.useWebSearch || false,
           useToolCalling: config.useToolCalling || false,
@@ -585,6 +620,14 @@ export function useChatMessages(
               saveHistoryMessages(messagesRef.current)
               // 清除第一条消息标记
               isSendingFirstMessageRef.current = false
+              
+              // 如果后端自动创建了聊天室，刷新聊天室列表
+              // 延迟执行，确保后端已经保存了聊天室
+              if (onMessageSent) {
+                setTimeout(() => {
+                  onMessageSent()
+                }, TIME_CONSTANTS.REFRESH_DELAY)
+              }
             }, 0)
           },
         }
@@ -597,7 +640,7 @@ export function useChatMessages(
       // 清除第一条消息标记
       isSendingFirstMessageRef.current = false
     }
-  }, [chatId, userInput, isConnecting, messagesState.messages.length, onFirstMessage, saveHistoryMessages, messageApi, loginUser.id])
+  }, [chatId, userInput, isConnecting, messagesState.messages.length, onFirstMessage, onMessageSent, saveHistoryMessages, messageApi])
 
   // 关闭 SSE 连接
   const closeConnection = useCallback(() => {

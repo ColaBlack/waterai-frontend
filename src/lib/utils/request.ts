@@ -5,8 +5,8 @@
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
 
-/** API 基础路径 */
-export const BASE_URL = '/api'
+/** API 基础路径 - 临时直接指向网关 */
+export const BASE_URL = 'http://localhost:8115/api'
 
 /** SSE 基础路径，直接使用 API 基础路径（通过 rewrite 代理到后端） */
 export const SSE_BASE_URL = process.env.NEXT_PUBLIC_SSE_BASE_URL || BASE_URL
@@ -23,16 +23,33 @@ const REQUEST_TIMEOUT = 60000
 const request: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: REQUEST_TIMEOUT,
-  withCredentials: true, // 允许携带 Cookie
+  // 不再需要 withCredentials，JWT通过Authorization header传递
 })
 
 /**
  * 请求拦截器
- * 在发送请求前对配置进行处理
+ * 在发送请求前添加JWT token到Authorization header
  */
 request.interceptors.request.use(
   function (config) {
-    // 可以在这里添加 token、修改请求头等
+    // 检查是否在客户端环境（避免SSR错误）
+    if (typeof window !== 'undefined') {
+      // 从localStorage获取JWT token
+      const token = localStorage.getItem('token')
+      console.log('[Axios] Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
+      console.log('[Axios] Request URL:', config.url)
+      
+      // 如果有token，添加到Authorization header
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`
+        console.log('[Axios] Added Authorization header:', `Bearer ${token.substring(0, 20)}...`)
+      } else {
+        console.warn('[Axios] No token found in localStorage')
+      }
+    } else {
+      console.warn('[Axios] Running in server environment, no token added')
+    }
+    
     return config
   },
   function (error) {
@@ -42,26 +59,49 @@ request.interceptors.request.use(
 
 /**
  * 响应拦截器
- * 统一处理响应结果，包括错误处理和登录状态检查
+ * 统一处理响应结果，包括JWT认证错误处理
  */
 request.interceptors.response.use(
   function (response: AxiosResponse) {
     const { data } = response
     
-    // 检查是否未登录
+    // 检查是否未登录（JWT认证失败）
     if (data.code === UNAUTHORIZED_CODE) {
-      // 不是获取用户信息接口，并且不是登录页面，则跳转到登录页面并保存当前页面的路径
-      if (
-        !response.request.responseURL.includes('user/get/login') &&
-        !window.location.pathname.includes('/user/login')
-      ) {
-        window.location.href = `/user/login?redirect=${encodeURIComponent(window.location.href)}`
+      // 检查是否在客户端环境（避免SSR错误）
+      if (typeof window !== 'undefined') {
+        // 清除本地token
+        localStorage.removeItem('token')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('userName')
+        
+        // 不是获取用户信息接口，并且不是登录页面，则跳转到登录页面
+        if (
+          !response.request.responseURL.includes('user/get/login') &&
+          !window.location.pathname.includes('/user/login')
+        ) {
+          window.location.href = `/user/login?redirect=${encodeURIComponent(window.location.href)}`
+        }
       }
     }
     return response
   },
   function (error) {
-    // 可以在这里统一处理错误，如显示错误提示
+    // 处理401 Unauthorized错误（JWT token无效或过期）
+    if (error.response?.status === 401) {
+      // 检查是否在客户端环境（避免SSR错误）
+      if (typeof window !== 'undefined') {
+        // 清除本地token
+        localStorage.removeItem('token')
+        localStorage.removeItem('userId')
+        localStorage.removeItem('userName')
+        
+        // 跳转到登录页面
+        if (!window.location.pathname.includes('/user/login')) {
+          window.location.href = `/user/login?redirect=${encodeURIComponent(window.location.href)}`
+        }
+      }
+    }
+    
     return Promise.reject(error)
   }
 )

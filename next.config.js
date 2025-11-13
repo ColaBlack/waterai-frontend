@@ -1,13 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8115/api/:path*',
-      },
-    ]
-  },
   images: {
     remotePatterns: [
       {
@@ -15,6 +7,14 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8115/api/:path*',
+      },
+    ]
   },
 }
 

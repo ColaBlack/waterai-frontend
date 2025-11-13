@@ -34,18 +34,24 @@ export default function ChatPage() {
     loadChatRoomList,
     createChatRoom,
     updateChatId
-  } = useChatRoom()
+  } = useChatRoom(message)
 
   // 消息管理
+  // 由于后端会自动创建聊天室，不再需要预先创建
+  // 但保留此回调以便后续可能需要更新 URL 等操作
   const handleFirstMessage = useCallback(async (prompt: string): Promise<string | null> => {
-    const newChatId = await createChatRoom(prompt)
-    
-    if (newChatId && newChatId !== chatId) {
-      updateChatId(newChatId)
-    }
-    
-    return newChatId
-  }, [createChatRoom, chatId, updateChatId])
+    // 后端会自动创建聊天室，所以这里不再需要预先创建
+    // 直接返回当前的 chatId，让后端处理
+    // 消息发送成功后，后端会自动创建聊天室
+    // 在消息发送完成后刷新聊天室列表（通过 onClose 回调）
+    return chatId
+  }, [chatId])
+
+  // 消息发送完成后的回调（用于刷新聊天室列表）
+  const handleMessageSent = useCallback(() => {
+    // 如果后端自动创建了聊天室，刷新聊天室列表
+    loadChatRoomList()
+  }, [loadChatRoomList])
 
   const {
     messages,
@@ -58,7 +64,7 @@ export default function ChatPage() {
     loadHistoryMessages,
     closeConnection,
     clearMessages
-  } = useChatMessages(chatId, message, handleFirstMessage)
+  } = useChatMessages(chatId, message, handleFirstMessage, handleMessageSent)
 
   // 初始化
   useEffect(() => {

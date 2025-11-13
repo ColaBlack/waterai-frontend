@@ -4,6 +4,8 @@ declare namespace API {
     userPrompt: string
     /** 会话ID，用于多轮对话 */
     chatId: string
+    /** 聊天室编号，如果不存在则自动创建 */
+    chatRoomId?: string
     /** 文本模型名称 */
     modelName?: 'glm-z1-flash' | 'glm-4.5-flash' | 'glm-4-flash'
     /** 是否启用联网搜索 */
@@ -19,6 +21,8 @@ declare namespace API {
     userPrompt: string
     /** 会话ID，用于多轮对话 */
     chatId: string
+    /** 聊天室编号，如果不存在则自动创建 */
+    chatRoomId?: string
     /** 图像URL列表，支持1-10张图片。可以是HTTP/HTTPS URL或Base64编码（data:image/jpeg;base64,...） */
     imageUrls: string[]
     /** 视觉模型类型 */

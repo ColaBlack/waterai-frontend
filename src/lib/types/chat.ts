@@ -66,6 +66,8 @@ export interface ChatMessage {
   isStreaming?: boolean
   /** AI消息的元数据（仅当role为'ai'时有效） */
   metadata?: AIMessageMetadata
+  /** AI思考过程（从<think></think>标签中提取） */
+  thinkingProcess?: string
 }
 
 /** 解析后的消息内容 */

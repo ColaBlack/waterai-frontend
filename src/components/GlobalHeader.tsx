@@ -1,39 +1,45 @@
 'use client'
 
-import React, { useEffect } from 'react'
-import { Layout, Menu, Dropdown, Avatar, Space, Button } from 'antd'
-import { UserOutlined, LogoutOutlined, SettingOutlined, HomeOutlined, CommentOutlined, TeamOutlined } from '@ant-design/icons'
-import { useRouter, usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Layout, Menu, Button, Avatar, Dropdown, message, Space } from 'antd'
+import type { MenuProps } from 'antd'
+import { UserOutlined, LogoutOutlined, CommentOutlined, TeamOutlined, HomeOutlined, SettingOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { useUserStore } from '@/lib/store/userStore'
-import { userLogout } from '@/api/userService/userController'
-import { message } from 'antd'
-import ROLE_ENUM from '@/lib/constants/roleEnums'
 import { checkAccess } from '@/lib/utils/checkAccess'
+import ROLE_ENUM from '@/lib/constants/roleEnums'
+import { userLogout } from '@/api/userService/userController'
 
 const { Header } = Layout
 
 export default function GlobalHeader() {
   const router = useRouter()
-  const pathname = usePathname()
-  const { loginUser, fetchLoginUser, clearLoginUser } = useUserStore()
+  const { loginUser, fetchLoginUser, logout, isLoggedIn } = useUserStore()
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
+    // 标记组件已水合，确保客户端渲染
+    setIsHydrated(true)
     fetchLoginUser()
   }, [fetchLoginUser])
 
   const handleLogout = async () => {
     try {
-      const res = await userLogout()
-      if (res.data.code === 200) {
-        message.success('退出登录成功')
-        clearLoginUser()
-        router.push('/user/login')
-      } else {
-        message.error('退出登录失败：' + res.data.message)
-      }
+      // 可选：调用后端登出接口（清除服务端可能的状态）
+      // 但不依赖其结果，因为JWT是无状态的
+      await userLogout().catch(() => {
+        // 忽略后端登出错误，因为JWT是无状态的
+      })
+      
+      message.success('退出登录成功')
+      logout() // 使用新的logout方法，会清除localStorage中的token
+      router.push('/user/login')
     } catch (error) {
-      message.error('退出登录失败')
+      // 即使后端登出失败，也要清除本地token
+      logout()
+      message.success('退出登录成功')
+      router.push('/user/login')
     }
   }
 
@@ -57,7 +63,7 @@ export default function GlobalHeader() {
     ],
   }
 
-  // 构建菜单项
+  // 构建菜单项 - 只在客户端水合后才进行权限检查
   const menuItems = [
     {
       key: '/',
@@ -66,30 +72,30 @@ export default function GlobalHeader() {
     },
   ]
 
-  // 如果有用户权限，显示 AI 问答
-  if (checkAccess(loginUser, ROLE_ENUM.USER)) {
-    menuItems.push({
-      key: '/ai/chat',
-      icon: <CommentOutlined />,
-      label: <Link href="/ai/chat">AI问答</Link>,
-    })
+  // 只在客户端水合后才添加需要权限检查的菜单项
+  if (isHydrated) {
+    // 如果有用户权限，显示 AI 问答
+    if (checkAccess(loginUser, ROLE_ENUM.USER)) {
+      menuItems.push({
+        key: '/ai/chat',
+        icon: <CommentOutlined />,
+        label: <Link href="/ai/chat">AI问答</Link>,
+      })
+    }
+
+    // 如果是管理员，显示用户管理
+    if (checkAccess(loginUser, ROLE_ENUM.ADMIN)) {
+      menuItems.push({
+        key: '/admin/user',
+        icon: <TeamOutlined />,
+        label: <Link href="/admin/user">用户管理</Link>,
+      })
+    }
   }
 
-  // 如果是管理员，显示用户管理
-  if (checkAccess(loginUser, ROLE_ENUM.ADMIN)) {
-    menuItems.push({
-      key: '/admin/user',
-      icon: <TeamOutlined />,
-      label: <Link href="/admin/user">用户管理</Link>,
-    })
-  }
-
-  // 获取当前选中的菜单项
+  // 获取当前选中的菜单项 - 暂时简化
   const getSelectedKey = () => {
-    if (pathname === '/') return '/'
-    if (pathname.startsWith('/ai/chat')) return '/ai/chat'
-    if (pathname.startsWith('/admin/user')) return '/admin/user'
-    return '/'
+    return '/' // 暂时默认选中主页
   }
 
   return (
@@ -122,7 +128,17 @@ export default function GlobalHeader() {
       </div>
       
       <div>
-        {loginUser.userRole !== ROLE_ENUM.PUBLIC ? (
+        {!isHydrated ? (
+          // 服务端渲染时显示加载状态，避免水合不匹配
+          <Space>
+            <Button type="text" loading>
+              登录
+            </Button>
+            <Button type="primary" loading>
+              注册
+            </Button>
+          </Space>
+        ) : isLoggedIn() ? (
           <Dropdown menu={userMenu} placement="bottomRight">
             <Space style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} src={loginUser.userAvatar} />

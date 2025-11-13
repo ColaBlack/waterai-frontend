@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { message as antdMessage } from 'antd'
-import { listChatRooms, createChatRoom as apiCreateChatRoom } from '@/lib/api/aiController'
+import { listChatRooms, createChatRoom as apiCreateChatRoom } from '@/api/chatService/chatRoomController'
 import { API_CONSTANTS, TIME_CONSTANTS } from '@/lib/constants/chat'
+import { useUserStore } from '@/lib/store/userStore'
 
 /**
  * 生成唯一的聊天室ID
@@ -18,6 +19,7 @@ export function generateChatId(): string {
  */
 export function useChatRoom() {
   const router = useRouter()
+  const { loginUser } = useUserStore()
   const [chatId, setChatId] = useState('')
   const [chatRoomList, setChatRoomList] = useState<API.ChatRoomVO[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -53,10 +55,15 @@ export function useChatRoom() {
 
   // 加载历史聊天室列表
   const loadChatRoomList = useCallback(async (): Promise<void> => {
+    if (!loginUser.id) {
+      // 如果用户未登录，不加载聊天室列表
+      return
+    }
+
     setLoadingHistory(true)
     
     try {
-      const response = await listChatRooms()
+      const response = await listChatRooms({ userId: loginUser.id })
 
       if (response.status === API_CONSTANTS.SUCCESS_STATUS) {
         const data = response.data.data || response.data
@@ -74,12 +81,21 @@ export function useChatRoom() {
     } finally {
       setLoadingHistory(false)
     }
-  }, [])
+  }, [loginUser.id])
 
   // 创建聊天室记录（在后端）
   const createChatRoom = useCallback(async (userPrompt: string): Promise<string | null> => {
+    if (!loginUser.id) {
+      // 如果用户未登录，无法创建聊天室
+      antdMessage.warning('用户未登录，无法创建聊天室')
+      return null
+    }
+
     try {
-      const response = await apiCreateChatRoom({ userPrompt })
+      const response = await apiCreateChatRoom({ 
+        userPrompt,
+        userId: loginUser.id 
+      })
 
       if (response.status === API_CONSTANTS.SUCCESS_STATUS) {
         const data: any = response.data.data || response.data
@@ -108,7 +124,7 @@ export function useChatRoom() {
       antdMessage.warning('聊天室创建失败，但可以继续对话')
       return null
     }
-  }, [chatId, loadChatRoomList, router])
+  }, [chatId, loginUser.id, loadChatRoomList, router])
 
   // 安全更新 chatId（用于在 SSE 连接完成后更新）
   const updateChatId = useCallback((newChatId: string) => {

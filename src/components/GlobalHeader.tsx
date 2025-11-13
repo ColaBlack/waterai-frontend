@@ -6,7 +6,7 @@ import { UserOutlined, LogoutOutlined, SettingOutlined, HomeOutlined, CommentOut
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useUserStore } from '@/lib/store/userStore'
-import { userLogout } from '@/lib/api/userController'
+import { userLogout } from '@/api/userService/userController'
 import { message } from 'antd'
 import ROLE_ENUM from '@/lib/constants/roleEnums'
 import { checkAccess } from '@/lib/utils/checkAccess'

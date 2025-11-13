@@ -5,7 +5,7 @@ import { Card, Form, Input, Button, message, Avatar, Space, Divider } from 'antd
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import GlobalLayout from '@/components/GlobalLayout'
 import { useUserStore } from '@/lib/store/userStore'
-import { updateMyProfile, updateMyPassword } from '@/lib/api/userController'
+import { updateMyProfile, updateMyPassword } from '@/api/userService/userController'
 import { USER_ROLE } from '@/lib/constants/roleEnums'
 
 export default function UserProfilePage() {

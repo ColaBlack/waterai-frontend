@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useReducer, type MutableRefObject } from 'react'
 import type { MessageInstance } from 'antd/es/message/interface'
 import { SSEClient } from '@/lib/utils/sse'
-import { getChatRoomMessages } from '@/lib/api/aiController'
+import { getChatRoomMessages } from '@/api/chatService/chatRoomController'
 import { ChatMessage, ModelConfig } from '@/lib/types/chat'
 import { MESSAGE_CONSTANTS, STORAGE_KEYS, API_CONSTANTS } from '@/lib/constants/chat'
-import { BASE_URL, SSE_BASE_URL } from '@/lib/utils/request'
+import { BASE_URL } from '@/lib/utils/request'
+import { useUserStore } from '@/lib/store/userStore'
 
 // 消息状态类型
 interface MessagesState {
@@ -287,6 +288,7 @@ export function useChatMessages(
   messageApi: MessageInstance,
   onFirstMessage?: (prompt: string) => Promise<string | null>
 ) {
+  const { loginUser } = useUserStore()
   // 使用 ref 保存最新的消息，避免在依赖数组中包含 messagesState.messages
   const messagesRef = useRef<ChatMessage[]>([])
   const messagesReducerRef = useRef(createMessagesReducer(messagesRef))
@@ -332,8 +334,17 @@ export function useChatMessages(
       return
     }
 
+    if (!loginUser.id) {
+      // 如果用户未登录，不加载历史消息
+      loadHistoryMessagesFromLocal()
+      return
+    }
+
     try {
-      const response = await getChatRoomMessages({ chatroomId: chatId })
+      const response = await getChatRoomMessages({ 
+        chatroomId: chatId, 
+        userId: loginUser.id as number 
+      } as API.getChatRoomMessagesParams)
       
       if (response.status === 200 && response.data.code === API_CONSTANTS.SUCCESS_CODE) {
         const messageList = response.data.data || []
@@ -368,15 +379,46 @@ export function useChatMessages(
         }
         return
       }
-    } catch (error) {
-      // 静默失败
+    } catch (error: any) {
+      // 静默处理错误，包括"聊天室不存在"的情况
+      // 如果聊天室不存在（新聊天室），这是正常情况，不应该显示错误
+      const status = error?.response?.status
+      const errorData = error?.response?.data
+      const errorMessage = errorData?.message || error?.message || ''
+      const errorCode = errorData?.code
+      
+      // 判断是否是"聊天室不存在"的错误
+      // 可能是 HTTP 404、401 或者业务错误码
+      const isChatRoomNotExists = 
+        status === 404 || // HTTP 404 Not Found
+        status === 401 || // HTTP 401 Unauthorized (可能是后端返回的)
+        errorMessage.includes('聊天室不存在') ||
+        errorMessage.includes('聊天室') && errorMessage.includes('不存在')
+      
+      if (isChatRoomNotExists) {
+        // 聊天室不存在是正常情况（新聊天室或临时ID），静默处理
+        // 这是预期的行为，不应该显示错误给用户
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[loadHistoryMessages] Chat room not exists (expected for new chat), loading from local storage')
+        }
+      } else {
+        // 其他错误（网络错误、服务器错误等），记录但不显示给用户
+        // 避免干扰用户体验，因为这些错误通常是暂时的
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[loadHistoryMessages] Failed to load messages:', {
+            status,
+            errorCode,
+            errorMessage: errorMessage || 'Unknown error'
+          })
+        }
+      }
     }
     
     // 只在不是正在发送第一条消息时才加载本地消息
     if (!isSendingFirstMessageRef.current) {
     loadHistoryMessagesFromLocal()
     }
-  }, [chatId, loadHistoryMessagesFromLocal])
+  }, [chatId, loginUser.id, loadHistoryMessagesFromLocal])
 
   // 保存消息到 localStorage
   const saveHistoryMessages = useCallback((msgs: ChatMessage[]) => {
@@ -395,6 +437,16 @@ export function useChatMessages(
     const prompt = userInput.trim()
 
     if (!prompt || isConnecting) {
+      return
+    }
+
+    // 检查用户是否登录
+    if (!loginUser.id) {
+      messageApi.error('请先登录后再发送消息')
+      // 跳转到登录页面
+      if (typeof window !== 'undefined') {
+        window.location.href = '/user/login?redirect=' + encodeURIComponent(window.location.href)
+      }
       return
     }
 
@@ -420,6 +472,11 @@ export function useChatMessages(
       const newChatId = await onFirstMessage(prompt)
       if (newChatId) {
         actualChatId = newChatId
+      } else {
+        // 如果创建聊天室失败，停止发送消息
+        isSendingFirstMessageRef.current = false
+        messageApi.error('创建聊天室失败，请稍后重试')
+        return
       }
     }
 
@@ -452,7 +509,7 @@ export function useChatMessages(
       let endpoint: string
       
       if (config.isVision) {
-        endpoint = '/ai/vision-chat'
+        endpoint = '/ai/chat/vision'
         requestData = {
           userPrompt: prompt,
           chatId: actualChatId,
@@ -475,7 +532,7 @@ export function useChatMessages(
       sseClientRef.current = sseClient
 
       await sseClient.connect(
-        `${(typeof window !== 'undefined' ? SSE_BASE_URL : BASE_URL)}${endpoint}`,
+        `${BASE_URL}${endpoint}`,
         requestData,
         {
           onMessage: (data: SSEMessageData) => {
@@ -492,7 +549,26 @@ export function useChatMessages(
             setIsConnecting(false)
             setIsLoading(false)
             dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
-            messageApi.error('连接失败，请稍后重试')
+            
+            // 根据错误类型显示不同的错误消息
+            const errorMessage = error.message || ''
+            if (errorMessage.includes('UNAUTHORIZED')) {
+              // 401 错误 - 用户未登录或 session 无效
+              messageApi.error('登录已过期，请重新登录')
+              // 刷新用户信息
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  window.location.href = '/user/login?redirect=' + encodeURIComponent(window.location.href)
+                }, 1500)
+              }
+            } else if (errorMessage.includes('FORBIDDEN')) {
+              // 403 错误 - 权限不足
+              messageApi.error('权限不足，无法发送消息')
+            } else {
+              // 其他错误
+              messageApi.error('连接失败，请稍后重试')
+            }
+            
             // 使用 ref 获取最新消息，避免依赖闭包
             setTimeout(() => {
               saveHistoryMessages(messagesRef.current)
@@ -521,7 +597,7 @@ export function useChatMessages(
       // 清除第一条消息标记
       isSendingFirstMessageRef.current = false
     }
-  }, [chatId, userInput, isConnecting, messagesState.messages.length, onFirstMessage, saveHistoryMessages, messageApi])
+  }, [chatId, userInput, isConnecting, messagesState.messages.length, onFirstMessage, saveHistoryMessages, messageApi, loginUser.id])
 
   // 关闭 SSE 连接
   const closeConnection = useCallback(() => {

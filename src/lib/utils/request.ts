@@ -8,8 +8,8 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios'
 /** API 基础路径 */
 export const BASE_URL = '/api'
 
-/** SSE 基础路径，优先使用环境变量配置 */
-export const SSE_BASE_URL = process.env.NEXT_PUBLIC_SSE_BASE_URL || '/api/sse'
+/** SSE 基础路径，直接使用 API 基础路径（通过 rewrite 代理到后端） */
+export const SSE_BASE_URL = process.env.NEXT_PUBLIC_SSE_BASE_URL || BASE_URL
 
 /** 未登录状态码 */
 const UNAUTHORIZED_CODE = 40100

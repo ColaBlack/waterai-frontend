@@ -11,6 +11,7 @@ import MessageList from '@/components/chat/MessageList'
 import ChatInput from '@/components/chat/ChatInput'
 import { useChatRoom } from '@/lib/hooks/useChatRoom'
 import { useChatMessages } from '@/lib/hooks/useChatMessages'
+import { useUserStore } from '@/lib/store/userStore'
 
 const { Content } = Layout
 
@@ -18,6 +19,7 @@ export default function ChatPage() {
   const params = useParams()
   const { message } = App.useApp()
   const chatIdFromParams = params.chatId ? (Array.isArray(params.chatId) ? params.chatId[0] : params.chatId) : undefined
+  const { fetchLoginUser } = useUserStore()
   
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
@@ -60,9 +62,11 @@ export default function ChatPage() {
 
   // 初始化
   useEffect(() => {
+    // 刷新用户信息，确保 session 有效
+    fetchLoginUser()
     initChatRoom(chatIdFromParams)
     loadChatRoomList()
-  }, [chatIdFromParams, initChatRoom, loadChatRoomList])
+  }, [chatIdFromParams, initChatRoom, loadChatRoomList, fetchLoginUser])
 
   // 加载历史消息
   useEffect(() => {

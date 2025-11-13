@@ -56,7 +56,20 @@ export class SSEClient {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        // 处理不同类型的错误
+        if (response.status === 401) {
+          // 401 Unauthorized - 用户未登录或 session 无效
+          throw new Error('UNAUTHORIZED: 请先登录后再发送消息')
+        } else if (response.status === 403) {
+          // 403 Forbidden - 权限不足
+          throw new Error('FORBIDDEN: 权限不足')
+        } else if (response.status === 404) {
+          // 404 Not Found - 资源不存在
+          throw new Error(`NOT_FOUND: 资源不存在`)
+        } else {
+          // 其他错误
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
       }
 
       options.onOpen?.()

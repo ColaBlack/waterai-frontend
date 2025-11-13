@@ -5,7 +5,7 @@ import { Table, Button, Space, Modal, Form, Input, Select, Image, message, Card,
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import GlobalLayout from '@/components/GlobalLayout'
-import { addUser, deleteUser, listUserByPage, updateUser } from '@/lib/api/userController'
+import { addUser, deleteUser, listUserByPage, updateUser } from '@/api/userService/userController'
 import { USER_ROLE } from '@/lib/constants/roleEnums'
 
 interface UserQueryParams {

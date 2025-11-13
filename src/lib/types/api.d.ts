@@ -104,11 +104,20 @@ declare namespace API {
   type getChatRoomMessagesParams = {
     /** 聊天室ID */
     chatroomId: string
+    /** 用户ID */
+    userId: number
   }
 
   type getChatRoomParams = {
     /** 聊天室ID */
     chatroomId: string
+    /** 用户ID */
+    userId: number
+  }
+
+  type listChatRoomsParams = {
+    /** 用户ID */
+    userId: number
   }
 
   type LoginUserVO = {

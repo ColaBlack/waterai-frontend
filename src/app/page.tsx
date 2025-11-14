@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button, Card, Row, Col, Space, Typography } from 'antd'
 import { CommentOutlined, TeamOutlined, SafetyOutlined, RocketOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
@@ -14,8 +14,10 @@ const { Title, Paragraph } = Typography
 export default function HomePage() {
   const router = useRouter()
   const { loginUser, fetchLoginUser } = useUserStore()
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
     fetchLoginUser()
   }, [fetchLoginUser])
 
@@ -68,7 +70,11 @@ export default function HomePage() {
           结合人工智能技术，为您提供专业的水产品食品安全监测服务
         </Paragraph>
         <Space size="large">
-          {loginUser.userRole === ROLE_ENUM.PUBLIC ? (
+          {!isClient ? (
+            <Button type="primary" size="large" loading>
+              加载中...
+            </Button>
+          ) : !loginUser.userRole || loginUser.userRole === ROLE_ENUM.BAN ? (
             <>
               <Button type="primary" size="large" onClick={() => router.push('/user/login')}>
                 立即登录
@@ -98,7 +104,7 @@ export default function HomePage() {
         </Title>
         <Row gutter={[24, 24]} justify="center">
           {features.map((feature, index) => {
-            const hasAccess = checkAccess(loginUser, feature.needAuth)
+            const hasAccess = isClient ? checkAccess(loginUser, feature.needAuth) : false
             return (
               <Col
                 key={index}
@@ -124,7 +130,7 @@ export default function HomePage() {
                   <Paragraph style={{ color: '#666', minHeight: '48px' }}>
                     {feature.description}
                   </Paragraph>
-                  {!hasAccess && feature.needAuth !== ROLE_ENUM.PUBLIC && (
+                  {isClient && !hasAccess && feature.needAuth !== ROLE_ENUM.PUBLIC && (
                     <Paragraph type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>
                       需要{feature.needAuth === ROLE_ENUM.ADMIN ? '管理员' : '登录'}权限
                     </Paragraph>

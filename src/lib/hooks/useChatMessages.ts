@@ -561,7 +561,7 @@ export function useChatMessages(
         requestData = {
           userPrompt: prompt,
           chatId: actualChatId,
-          chatRoomId: actualChatId, // 聊天室编号，如果不存在则后端自动创建
+          chatRoomId: actualChatId,
           modelName: config.model,
           useWebSearch: config.useWebSearch || false,
           useToolCalling: config.useToolCalling || false,

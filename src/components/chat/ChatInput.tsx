@@ -50,13 +50,7 @@ export default function ChatInput({
     }}>
       <ModelConfigPanel
         selectedModel={modelConfig.selectedModel}
-        useWebSearch={modelConfig.useWebSearch}
-        useRAG={modelConfig.useRAG}
-        useToolCalling={modelConfig.useToolCalling}
         onModelChange={modelConfig.setSelectedModel}
-        onWebSearchChange={modelConfig.setUseWebSearch}
-        onRAGChange={modelConfig.setUseRAG}
-        onToolCallingChange={modelConfig.setUseToolCalling}
       />
 
       {!modelConfig.isText && (

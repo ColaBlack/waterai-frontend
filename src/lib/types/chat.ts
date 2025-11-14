@@ -84,12 +84,6 @@ export interface ModelConfig {
   model: string
   /** 是否为视觉模型 */
   isVision: boolean
-  /** 是否启用联网搜索 */
-  useWebSearch?: boolean
-  /** 是否启用RAG */
-  useRAG?: boolean
-  /** 是否启用工具调用 */
-  useToolCalling?: boolean
   /** 图片URL列表（视觉模型专用） */
   imageUrls?: string[]
 }

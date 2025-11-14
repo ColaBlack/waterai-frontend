@@ -30,9 +30,6 @@ export default function ChatInput({
   const { handleSend, handleEnterSend } = useSendMessage({
     value,
     selectedModel: modelConfig.selectedModel,
-    useWebSearch: modelConfig.useWebSearch,
-    useRAG: modelConfig.useRAG,
-    useToolCalling: modelConfig.useToolCalling,
     isText: modelConfig.isText,
     imageFiles,
     isConnecting,

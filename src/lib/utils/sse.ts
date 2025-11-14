@@ -170,7 +170,7 @@ export class SSEClient {
             }
           }
 
-          // 保留原始内容，不进行额外的trim或过滤
+          // 按SSE规范，将同一事件内的多行 data: 按原样用换行拼接，保留所有内容与换行
           const combinedData = dataParts.join('\n')
 
           if (combinedData.length === 0) {
@@ -220,13 +220,8 @@ export class SSEClient {
     // 检查是否为纯文本数据（不是JSON格式）
     const trimmedBuffer = this.jsonBuffer.trim()
     if (trimmedBuffer && !trimmedBuffer.startsWith('{') && !trimmedBuffer.startsWith('[')) {
-      // 这是纯文本数据，直接处理
-      try {
-        this.parseSingleJSONObject(trimmedBuffer, options)
-      } catch (error) {
-        // 如果解析失败，尝试作为纯文本处理
-        this.handlePlainText(trimmedBuffer, options)
-      }
+      // 这是纯文本数据，直接处理（保留原始内容，不使用trimmed版本）
+      this.handlePlainText(this.jsonBuffer, options)
       this.jsonBuffer = '' // 清空缓冲区
       return
     }
@@ -283,12 +278,12 @@ export class SSEClient {
    * @param options 回调选项
    */
   private handlePlainText(text: string, options: SSEOptions) {
-    // 直接将文本作为增量内容处理
-    if (text && text.trim()) {
+    // 直接将文本作为增量内容处理，保留所有字符（包括空白字符）
+    if (text !== undefined && text !== null) {
       // 累积文本内容
       this.lastReceivedText += text
       
-      // 调用回调，传递文本增量
+      // 调用回调，传递文本增量（保留原始内容）
       options.onMessage?.({
         text: text,
         metadata: undefined,
@@ -299,7 +294,8 @@ export class SSEClient {
         console.log('[SSE] Handled plain text:', {
           textLength: text.length,
           textPreview: text.substring(0, 100),
-          totalLength: this.lastReceivedText.length
+          totalLength: this.lastReceivedText.length,
+          rawText: JSON.stringify(text.substring(0, 50)) // 显示原始字符串
         })
       }
     }

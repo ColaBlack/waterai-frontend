@@ -30,11 +30,21 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
           length: contentStr.length,
           hasNewlines: contentStr.includes('\n'),
           preview: contentStr.substring(0, 200),
+          rawContent: JSON.stringify(contentStr.substring(0, 100)) // 显示原始字符串
         })
       }
 
+      // 尝试解析Markdown
       const html = marked.parse(contentStr) as string
-      contentRef.current.innerHTML = html
+      
+      // 检查解析结果是否合理（避免内容丢失）
+      if (html && html.length > 0) {
+        contentRef.current.innerHTML = html
+      } else {
+        // 如果Markdown解析结果为空，使用原始文本
+        contentRef.current.style.whiteSpace = 'pre-wrap'
+        contentRef.current.textContent = contentStr
+      }
       lastContentRef.current = contentStr
     } catch (error) {
       console.error('[MarkdownRenderer] Parse error:', error)

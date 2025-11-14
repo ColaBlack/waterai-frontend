@@ -562,10 +562,7 @@ export function useChatMessages(
           userPrompt: prompt,
           chatId: actualChatId,
           chatRoomId: actualChatId,
-          modelName: config.model,
-          useWebSearch: config.useWebSearch || false,
-          useToolCalling: config.useToolCalling || false,
-          useRAG: config.useRAG || false
+          modelName: config.model
         }
       }
 

@@ -6,9 +6,6 @@ import { convertImagesToBase64, cleanInputValue } from '../utils'
 interface UseSendMessageParams {
   value: string
   selectedModel: string
-  useWebSearch: boolean
-  useRAG: boolean
-  useToolCalling: boolean
   isText: boolean
   imageFiles: UploadFile[]
   isConnecting: boolean
@@ -21,9 +18,6 @@ interface UseSendMessageParams {
 export function useSendMessage({
   value,
   selectedModel,
-  useWebSearch,
-  useRAG,
-  useToolCalling,
   isText,
   imageFiles,
   isConnecting,
@@ -43,9 +37,6 @@ export function useSendMessage({
     const config: ModelConfig = {
       model: selectedModel,
       isVision: !isText,
-      useWebSearch: isText ? useWebSearch : false,
-      useRAG: isText ? useRAG : false,
-      useToolCalling: isText ? useToolCalling : false,
     }
 
     if (!isText && imageFiles.length > 0) {
@@ -60,9 +51,6 @@ export function useSendMessage({
   }, [
     value,
     selectedModel,
-    useWebSearch,
-    useRAG,
-    useToolCalling,
     isText,
     imageFiles,
     isConnecting,

@@ -159,6 +159,7 @@ export class SSEClient {
               if (value.startsWith(' ')) {
                 value = value.slice(1)
               }
+              // 处理可能包含换行符的数据
               dataParts.push(value)
             } else if (line.startsWith(':')) {
               // Comment line per SSE spec, ignore
@@ -174,6 +175,17 @@ export class SSEClient {
 
           if (combinedData.length === 0) {
             continue
+          }
+
+          // 添加调试日志来查看接收到的原始数据
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[SSE] Received raw data:', {
+              dataParts: dataParts,
+              combinedData: combinedData.substring(0, 200),
+              dataLength: combinedData.length,
+              isJSON: combinedData.trim().startsWith('{'),
+              isPlainText: !combinedData.trim().startsWith('{') && !combinedData.trim().startsWith('[')
+            })
           }
 
           // 检查是否为控制消息（如 [DONE]），但不影响空白字符的传递
@@ -204,6 +216,20 @@ export class SSEClient {
   private parseMultipleJSONObjects(data: string, options: SSEOptions) {
     // 将数据追加到JSON缓冲区
     this.jsonBuffer += data
+    
+    // 检查是否为纯文本数据（不是JSON格式）
+    const trimmedBuffer = this.jsonBuffer.trim()
+    if (trimmedBuffer && !trimmedBuffer.startsWith('{') && !trimmedBuffer.startsWith('[')) {
+      // 这是纯文本数据，直接处理
+      try {
+        this.parseSingleJSONObject(trimmedBuffer, options)
+      } catch (error) {
+        // 如果解析失败，尝试作为纯文本处理
+        this.handlePlainText(trimmedBuffer, options)
+      }
+      this.jsonBuffer = '' // 清空缓冲区
+      return
+    }
     
     // 尝试解析所有完整的JSON对象
     while (this.jsonBuffer.length > 0) {
@@ -252,6 +278,34 @@ export class SSEClient {
   }
 
   /**
+   * 处理纯文本数据（非JSON格式）
+   * @param text 纯文本内容
+   * @param options 回调选项
+   */
+  private handlePlainText(text: string, options: SSEOptions) {
+    // 直接将文本作为增量内容处理
+    if (text && text.trim()) {
+      // 累积文本内容
+      this.lastReceivedText += text
+      
+      // 调用回调，传递文本增量
+      options.onMessage?.({
+        text: text,
+        metadata: undefined,
+        thinkingProcess: undefined
+      })
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SSE] Handled plain text:', {
+          textLength: text.length,
+          textPreview: text.substring(0, 100),
+          totalLength: this.lastReceivedText.length
+        })
+      }
+    }
+  }
+
+  /**
    * 解析单个JSON对象并提取数据
    * @param jsonStr JSON字符串
    * @param options 回调选项
@@ -262,10 +316,12 @@ export class SSEClient {
     try {
       sseResponse = JSON.parse(jsonStr)
     } catch (error) {
-      // JSON解析失败，记录错误但不显示原始JSON，直接返回
+      // JSON解析失败，可能是纯文本数据，尝试作为文本处理
       if (process.env.NODE_ENV === 'development') {
-        console.warn('[SSE] Failed to parse JSON:', error, 'JSON preview:', jsonStr.substring(0, 200))
+        console.warn('[SSE] Failed to parse JSON, treating as plain text:', error, 'Text preview:', jsonStr.substring(0, 200))
       }
+      // 直接作为纯文本处理
+      this.handlePlainText(jsonStr, options)
       return
     }
     
@@ -278,19 +334,6 @@ export class SSEClient {
       if ((response as any).result?.output?.text !== undefined) {
         const textValue = (response as any).result.output.text
         if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
-          // 如果text值看起来像完整的JSON对象字符串，尝试解析
-          const trimmed = textValue.trim()
-          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
-            try {
-              const parsed = JSON.parse(textValue)
-              // 递归提取
-              return extractTextFromResponse(parsed)
-            } catch (e) {
-              // 解析失败，可能是普通文本，直接返回
-              return textValue
-            }
-          }
-          // 普通文本，直接返回（保留所有内容，包括换行符和列表项）
           return textValue
         }
       }
@@ -299,15 +342,6 @@ export class SSEClient {
       if ((response as any).results?.[0]?.output?.text !== undefined) {
         const textValue = (response as any).results[0].output.text
         if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
-          const trimmed = textValue.trim()
-          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
-            try {
-              const parsed = JSON.parse(textValue)
-              return extractTextFromResponse(parsed)
-            } catch (e) {
-              return textValue
-            }
-          }
           return textValue
         }
       }
@@ -315,23 +349,7 @@ export class SSEClient {
       // 路径1: chatResponse.result.output.text（原有格式，保持兼容）
       if (response.chatResponse?.result?.output?.text !== undefined) {
         const textValue = response.chatResponse.result.output.text
-        // 移除对单个 '-' 的过滤，因为列表项可能以 '-' 开头
-        // 只检查是否是字符串类型，以及不是完整的 JSON 对象
         if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
-          // 如果text值看起来像完整的JSON对象字符串，尝试解析
-          const trimmed = textValue.trim()
-          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
-            // 只有看起来像完整 JSON 对象时才尝试解析（长度大于10以避免误判）
-            try {
-              const parsed = JSON.parse(textValue)
-              // 递归提取
-              return extractTextFromResponse(parsed)
-            } catch (e) {
-              // 解析失败，可能是普通文本，直接返回
-              return textValue
-            }
-          }
-          // 普通文本，直接返回（保留所有内容，包括换行符和列表项）
           return textValue
         }
       }
@@ -340,15 +358,6 @@ export class SSEClient {
       if (response.chatResponse?.results?.[0]?.output?.text !== undefined) {
         const textValue = response.chatResponse.results[0].output.text
         if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
-          const trimmed = textValue.trim()
-          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
-            try {
-              const parsed = JSON.parse(textValue)
-              return extractTextFromResponse(parsed)
-            } catch (e) {
-              return textValue
-            }
-          }
           return textValue
         }
       }
@@ -357,17 +366,13 @@ export class SSEClient {
       if ((response as any).text !== undefined) {
         const textValue = (response as any).text
         if (textValue !== undefined && textValue !== null && typeof textValue === 'string') {
-          const trimmed = textValue.trim()
-          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 10) {
-            try {
-              const parsed = JSON.parse(textValue)
-              return extractTextFromResponse(parsed)
-            } catch (e) {
-              return textValue
-            }
-          }
           return textValue
         }
+      }
+      
+      // 路径4: 检查是否为纯文本数据（新增，用于处理data:+内容格式）
+      if (typeof response === 'string') {
+        return response
       }
       
       // 如果所有路径都无法提取有效文本，返回空字符串
@@ -403,40 +408,12 @@ export class SSEClient {
       })
     }
     
-    // 最终检查：确保提取的文本不是JSON字符串
-    if (extractedText && typeof extractedText === 'string') {
-      const trimmed = extractedText.trim()
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        // 提取的文本仍然是JSON，尝试最后一次解析
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[SSE] Extracted text is still JSON, attempting final parse:', trimmed.substring(0, 100))
-        }
-        try {
-          const parsed = JSON.parse(extractedText)
-          const finalText = extractTextFromResponse(parsed)
-          if (finalText && typeof finalText === 'string' && finalText.trim().startsWith('{')) {
-            // 最终还是JSON，清空文本
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('[SSE] Final extracted text is still JSON, clearing:', finalText.substring(0, 100))
-            }
-            extractedText = ''
-          } else {
-            extractedText = (typeof finalText === 'string' ? finalText : '') || ''
-          }
-        } catch (e) {
-          // 解析失败，清空文本（绝不显示JSON）
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('[SSE] Failed to parse extracted JSON, clearing text')
-          }
-          extractedText = ''
-        }
-      }
-    } else if (extractedText && typeof extractedText !== 'string') {
-      // 如果不是字符串，清空
+    // 确保提取的文本是字符串类型
+    if (extractedText && typeof extractedText !== 'string') {
       if (process.env.NODE_ENV === 'development') {
-        console.warn('[SSE] extractedText is not a string after final check, clearing:', typeof extractedText)
+        console.warn('[SSE] extractedText is not a string, converting:', typeof extractedText)
       }
-      extractedText = ''
+      extractedText = String(extractedText)
     }
     
     // 使用提取的文本作为当前文本，确保是字符串类型
@@ -608,28 +585,17 @@ export class SSEClient {
     // 确保 textIncrement 是字符串
     const textIncrementStr = typeof textIncrement === 'string' ? textIncrement : ''
     
-    // 只有当textIncrement有实际内容时才认为有文本增量（过滤掉空字符串和JSON字符串）
-    // 注意：不再过滤单独的 '-'，因为列表项可能以 '-' 开头
+    // 只有当textIncrement有实际内容时才认为有文本增量（过滤掉空字符串）
+    // 不过滤任何看起来像代码或JSON的内容，因为这些可能是有效的回复内容
     const hasTextIncrement = textIncrementStr !== undefined && 
                              textIncrementStr !== null && 
                              textIncrementStr !== '' && 
-                             typeof textIncrementStr === 'string' &&
-                             !(textIncrementStr.trim().startsWith('{') && textIncrementStr.trim().endsWith('}'))
+                             typeof textIncrementStr === 'string'
     
-    // 最终安全检查：确保safeText不是JSON字符串，且确保是字符串类型
+    // 直接使用文本内容，不进行JSON过滤
     let safeText = ''
     if (hasTextIncrement) {
-      // 使用已经确保是字符串的 textIncrementStr
-      const trimmed = textIncrementStr.trim()
-      // 如果看起来像JSON字符串，绝不传递
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[SSE] Blocked JSON string from being displayed:', trimmed.substring(0, 100))
-        }
-        safeText = ''
-      } else {
-        safeText = textIncrementStr
-      }
+      safeText = textIncrementStr
     }
     
     // 确保 safeText 始终是字符串
@@ -650,6 +616,23 @@ export class SSEClient {
         
         // 从显示文本中移除 <think></think> 标签及其内容
         displayText = safeText.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+      }
+      
+      // 处理工具调用标签：保护 <tool_call> 标签不被Markdown解析器处理
+      // 将 <tool_call> 和 </tool_call> 替换为代码块格式，保持内容完整显示
+      displayText = displayText.replace(/<tool_call>/g, '```\n<tool_call>')
+      displayText = displayText.replace(/<\/tool_call>/g, '</tool_call>\n```')
+      
+      // 处理其他可能的工具调用相关标签
+      displayText = displayText.replace(/<arg_key>/g, '<arg_key>')
+      displayText = displayText.replace(/<\/arg_key>/g, '</arg_key>')
+      displayText = displayText.replace(/<arg_value>/g, '<arg_value>')
+      displayText = displayText.replace(/<\/arg_value>/g, '</arg_value>')
+      
+      // 特别处理JSON代码块，确保完整显示
+      // 如果内容包含```json但没有结束标记，不要截断
+      if (displayText.includes('```json') && !displayText.includes('```\n\n') && !displayText.endsWith('```')) {
+        // JSON代码块可能还在流式传输中，保持原样
       }
     }
     

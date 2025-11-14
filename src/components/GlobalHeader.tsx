@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Layout, Menu, Button, Avatar, Dropdown, message, Space } from 'antd'
 import type { MenuProps } from 'antd'
 import { UserOutlined, LogoutOutlined, CommentOutlined, TeamOutlined, HomeOutlined, SettingOutlined } from '@ant-design/icons'
@@ -15,6 +15,7 @@ const { Header } = Layout
 
 export default function GlobalHeader() {
   const router = useRouter()
+  const pathname = usePathname()
   const { loginUser, fetchLoginUser, logout, isLoggedIn } = useUserStore()
   const [isHydrated, setIsHydrated] = useState(false)
 
@@ -93,9 +94,18 @@ export default function GlobalHeader() {
     }
   }
 
-  // 获取当前选中的菜单项 - 暂时简化
+  // 获取当前选中的菜单项
   const getSelectedKey = () => {
-    return '/' // 暂时默认选中主页
+    // 根据当前路径匹配菜单项
+    if (pathname === '/') {
+      return '/'
+    } else if (pathname.startsWith('/ai/chat')) {
+      return '/ai/chat'
+    } else if (pathname.startsWith('/admin/user')) {
+      return '/admin/user'
+    }
+    // 如果没有匹配的路径，返回空数组（不高亮任何菜单项）
+    return ''
   }
 
   return (

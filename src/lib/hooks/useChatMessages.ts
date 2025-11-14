@@ -105,13 +105,19 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
             }
           }
           
-          // 如果text看起来像JSON字符串（以{开头且以}结尾），不追加
+          // 如果text看起来像纯JSON字符串（以{开头且以}结尾），但不是代码块中的JSON，则不追加
           if (textToAppend) {
             const trimmed = textToAppend.trim()
-            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-              // 看起来像JSON字符串，不追加到消息内容中
+            const currentContent = typeof currentMessage.content === 'string' ? currentMessage.content : String(currentMessage.content || '')
+            
+            // 只有当这是一个完整的独立JSON对象，且不在代码块上下文中时才过滤
+            if (trimmed.startsWith('{') && trimmed.endsWith('}') && 
+                !currentContent.includes('```json') && // 不在JSON代码块中
+                !trimmed.includes('\n') && // 不是多行JSON（工具调用的JSON通常是多行的）
+                trimmed.length < 200) { // 不是很长的JSON（工具调用的JSON通常较长）
+              // 看起来像纯JSON响应对象，不追加到消息内容中
               if (process.env.NODE_ENV === 'development') {
-                console.warn('[Reducer] Blocked JSON string from being added to message content:', trimmed.substring(0, 100))
+                console.warn('[Reducer] Blocked pure JSON response from being added to message content:', trimmed.substring(0, 100))
               }
               textToAppend = ''
             }

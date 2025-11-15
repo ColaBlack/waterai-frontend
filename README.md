@@ -18,11 +18,20 @@
 src/
 ├── app/                    # Next.js App Router 页面
 │   ├── ai/chat/           # AI对话页面
+│   ├── vision-chat/       # 视觉聊天页面
 │   ├── admin/             # 管理员页面
 │   └── user/              # 用户相关页面
+├── api/                   # API接口定义
+│   ├── file.ts            # 文件上传API
+│   └── vision-chat.ts     # 视觉聊天API
 ├── components/            # 可复用组件
 │   ├── chat/              # 聊天相关组件
+│   ├── vision-chat/       # 视觉聊天组件
+│   │   └── vision-chat-interface.tsx
+│   ├── user/              # 用户相关组件
+│   │   └── avatar-upload.tsx  # 头像上传组件
 │   ├── ui/                # 基础UI组件
+│   │   └── file-upload.tsx    # 文件上传组件
 │   └── GlobalHeader.tsx   # 全局导航栏
 ├── lib/                   # 工具库和配置
 │   ├── api/               # API接口定义
@@ -41,6 +50,8 @@ src/
 - **视觉模型**: GLM-4V-Flash、GLM-4.1V-Thinking-Flash
 - **实时流式响应**: 基于SSE的流式数据传输
 - **多轮对话**: 支持上下文记忆的连续对话
+- **图片上传**: 支持上传图片进行视觉对话
+- **聊天记录**: 视觉聊天记录查看和管理
 
 ### 2. 智能增强功能
 - **RAG检索**: 自动从向量数据库检索相关文档
@@ -48,7 +59,13 @@ src/
 - **联网搜索**: DuckDuckGo实时搜索
 - **思考过程**: 显示AI的推理过程
 
-### 3. 用户体验
+### 3. 文件管理系统
+- **头像上传**: 用户头像上传和更换
+- **图片上传**: 聊天中的图片上传功能
+- **文件预览**: 上传前的图片预览
+- **拖拽上传**: 支持拖拽文件上传
+
+### 4. 用户体验
 - **响应式设计**: 适配各种屏幕尺寸
 - **暗色主题**: 护眼的深色界面
 - **快捷操作**: 键盘快捷键支持
@@ -83,7 +100,10 @@ npm start
 ### 环境变量
 创建 `.env.local` 文件：
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8117
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8118
+NEXT_PUBLIC_CHAT_API_URL=http://localhost:8117
+NEXT_PUBLIC_FILE_API_URL=http://localhost:8120
+NEXT_PUBLIC_DATA_API_URL=http://localhost:8121
 NEXT_PUBLIC_APP_NAME=WaterAI
 ```
 
@@ -98,12 +118,22 @@ NEXT_PUBLIC_APP_NAME=WaterAI
 - `StreamingText.tsx`: 流式文本显示
 - `ToolCallsPanel.tsx`: 工具调用结果展示
 
-### 2. Hooks (`src/lib/hooks/`)
+### 2. 视觉聊天组件 (`src/components/vision-chat/`)
+- `VisionChatInterface.tsx`: 视觉聊天主界面
+
+### 3. 用户组件 (`src/components/user/`)
+- `AvatarUpload.tsx`: 头像上传组件
+- `SimpleAvatarUpload.tsx`: 简化版头像上传
+
+### 4. UI组件 (`src/components/ui/`)
+- `FileUpload.tsx`: 通用文件上传组件
+
+### 5. Hooks (`src/lib/hooks/`)
 - `useChatMessages.ts`: 聊天消息管理
 - `useUserStore.ts`: 用户状态管理
 - `useModelConfig.ts`: 模型配置管理
 
-### 3. 工具库 (`src/lib/utils/`)
+### 6. 工具库 (`src/lib/utils/`)
 - `sse.ts`: SSE客户端实现
 - `auth.ts`: 认证工具
 - `api.ts`: API请求封装

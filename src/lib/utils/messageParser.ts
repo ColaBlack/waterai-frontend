@@ -11,8 +11,8 @@ import { ParsedMessageContent } from '@/lib/types/chat'
  */
 const THINKING_PROCESS_REGEX = /<think>([\s\S]*?)<\/think>/gi
 
-// 仅对<think></think>做结构化处理；另外，为满足显示要求，移除工具调用相关标签包裹内容
-const TOOL_CALL_REGEX = /<(tool_call|ddg-search|mongodb|mcp|rag)(?:\b[^>]*)?>[\s\S]*?<\/\1>|<(tool_call|ddg-search|mongodb|mcp|rag)(?:[^>]*)\/>|<\/(tool_call|ddg-search|mongodb|mcp|rag)>/gi
+// 仅对<think></think>做结构化处理；另外，为满足显示要求，移除工具调用相关标签的外层标签但保留其中的文本
+const TOOL_CALL_TAGS_ONLY_REGEX = /<\/?(tool_call|ddg-search|mongodb|mcp|rag)(?:\b[^>]*)\/?\>/gi
 
 /**
  * 解析消息内容，提取思考过程和正常内容
@@ -26,8 +26,8 @@ const TOOL_CALL_REGEX = /<(tool_call|ddg-search|mongodb|mcp|rag)(?:\b[^>]*)?>[\s
  * // { thinkingProcess: '思考过程', normalContent: '这是正常内容' }
  */
 export function parseMessageContent(content: string): ParsedMessageContent {
-  // 先移除工具调用标签（含包裹内容），避免出现在界面
-  const withoutToolTags = content.replace(TOOL_CALL_REGEX, '')
+  // 先移除工具调用标签（仅移除标签本身，保留其中文本）
+  const withoutToolTags = content.replace(TOOL_CALL_TAGS_ONLY_REGEX, '')
   const thinkMatches = withoutToolTags.match(THINKING_PROCESS_REGEX)
   
   let thinkingProcess = ''

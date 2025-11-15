@@ -270,7 +270,9 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
           messagesRef.current = newMessages
           return newState
         }
-        console.warn('[Reducer] UPDATE_LAST_AI_MESSAGE: No AI message to update')
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[Reducer] UPDATE_LAST_AI_MESSAGE: No AI message to update')
+        }
         return state
       }
       
@@ -345,7 +347,9 @@ export function useChatMessages(
 
     // 如果正在发送第一条消息，不要加载历史消息（避免覆盖正在发送的消息）
     if (isSendingFirstMessageRef.current) {
-      console.log('[loadHistoryMessages] Skipping load - first message in progress')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[loadHistoryMessages] Skipping load - first message in progress')
+      }
       return
     }
 
@@ -399,7 +403,9 @@ export function useChatMessages(
           messagesRef.current = []
         } else {
           // 当前有消息但后端没有消息，可能是正在发送第一条消息，保留当前消息
-          console.log('[loadHistoryMessages] Preserving current messages, backend has no messages yet')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[loadHistoryMessages] Preserving current messages, backend has no messages yet')
+          }
         }
         return
       }
@@ -515,7 +521,9 @@ export function useChatMessages(
       } catch (error) {
         // 即使 onFirstMessage 失败，也继续发送消息
         // 因为后端会自动创建聊天室
-        console.warn('onFirstMessage failed, but continuing with message send:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('onFirstMessage failed, but continuing with message send:', error)
+        }
       }
     }
 

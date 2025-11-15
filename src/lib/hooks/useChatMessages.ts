@@ -426,7 +426,7 @@ export function useChatMessages(
         errorMessage.includes('聊天室') && errorMessage.includes('不存在')
       
       if (isChatRoomNotExists) {
-        // 聊天室不存在是正常情况（新聊天室或临时ID），静默处理
+        // 聊天室不存在是正常情况（新聊天室），静默处理
         // 这是预期的行为，不应该显示错误给用户
         if (process.env.NODE_ENV === 'development') {
           console.log('[loadHistoryMessages] Chat room not exists (expected for new chat), loading from local storage')

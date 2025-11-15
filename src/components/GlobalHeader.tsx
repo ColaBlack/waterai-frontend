@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Layout, Menu, Button, Avatar, Dropdown, message, Space } from 'antd'
 import type { MenuProps } from 'antd'
-import { UserOutlined, LogoutOutlined, CommentOutlined, TeamOutlined, HomeOutlined, SettingOutlined } from '@ant-design/icons'
+import { UserOutlined, LogoutOutlined, CommentOutlined, TeamOutlined, HomeOutlined, SettingOutlined, CameraOutlined, MessageOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { useUserStore } from '@/lib/store/userStore'
 import { checkAccess } from '@/lib/utils/checkAccess'
@@ -75,21 +75,31 @@ export default function GlobalHeader() {
 
   // 只在客户端水合后才添加需要权限检查的菜单项
   if (isHydrated) {
-    // 如果有用户权限，显示 AI 问答
+    // 如果有用户权限，显示 AI 问答和视觉AI对话
     if (checkAccess(loginUser, ROLE_ENUM.USER)) {
       menuItems.push({
         key: '/ai/chat',
         icon: <CommentOutlined />,
         label: <Link href="/ai/chat">AI问答</Link>,
       })
+      menuItems.push({
+        key: '/ai/vision',
+        icon: <CameraOutlined />,
+        label: <Link href="/ai/vision">视觉AI</Link>,
+      })
     }
 
-    // 如果是管理员，显示用户管理
+    // 如果是管理员，显示用户管理和聊天管理
     if (checkAccess(loginUser, ROLE_ENUM.ADMIN)) {
       menuItems.push({
         key: '/admin/user',
         icon: <TeamOutlined />,
         label: <Link href="/admin/user">用户管理</Link>,
+      })
+      menuItems.push({
+        key: '/admin/chat',
+        icon: <MessageOutlined />,
+        label: <Link href="/admin/chat">聊天管理</Link>,
       })
     }
   }
@@ -101,6 +111,10 @@ export default function GlobalHeader() {
       return '/'
     } else if (pathname.startsWith('/ai/chat')) {
       return '/ai/chat'
+    } else if (pathname.startsWith('/ai/vision')) {
+      return '/ai/vision'
+    } else if (pathname.startsWith('/admin/chat')) {
+      return '/admin/chat'
     } else if (pathname.startsWith('/admin/user')) {
       return '/admin/user'
     }

@@ -88,6 +88,10 @@ declare namespace API {
     userAccount: string;
     /** 用户头像URL */
     userAvatar?: string;
+    /** 用户密码 */
+    userPassword: string;
+    /** 用户简介 */
+    userProfile?: string;
     /** 用户角色 */
     userRole?: "user" | "admin";
   };

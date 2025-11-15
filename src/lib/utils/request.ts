@@ -5,7 +5,7 @@
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
 
-/** API 基础路径 - 临时直接指向网关 */
+/** API 基础路径 */
 export const BASE_URL = 'http://localhost:8115/api'
 
 /** SSE 基础路径，直接使用 API 基础路径（通过 rewrite 代理到后端） */
@@ -50,6 +50,8 @@ request.interceptors.request.use(
       } else if (process.env.NODE_ENV === 'development') {
         console.warn('[Axios] No token found in localStorage')
       }
+      
+      // X-User-Id由网关从JWT token中提取并添加，前端不需要手动添加
     } else if (process.env.NODE_ENV === 'development') {
       console.warn('[Axios] Running in server environment, no token added')
     }

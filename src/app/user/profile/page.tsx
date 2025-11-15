@@ -1,19 +1,26 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Card, Form, Input, Button, message, Avatar, Space, Divider } from 'antd'
-import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { Card, Form, Input, Button, Avatar, Space, Divider, Upload, App } from 'antd'
+import { UserOutlined, LockOutlined, UploadOutlined } from '@ant-design/icons'
+import type { UploadProps } from 'antd'
 import GlobalLayout from '@/components/GlobalLayout'
 import { useUserStore } from '@/lib/store/userStore'
 import { updateMyProfile, updateMyPassword } from '@/api/userService/userController'
+import { fileApi } from '@/api/file'
 import { USER_ROLE } from '@/lib/constants/roleEnums'
+import { ImageCropper } from '@/components/ui/image-cropper'
 
 export default function UserProfilePage() {
+  const { message } = App.useApp()
   const { loginUser, fetchLoginUser } = useUserStore()
   const [profileForm] = Form.useForm()
   const [passwordForm] = Form.useForm()
   const [profileLoading, setProfileLoading] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const [cropperVisible, setCropperVisible] = useState(false)
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
 
   useEffect(() => {
     fetchLoginUser()
@@ -23,7 +30,6 @@ export default function UserProfilePage() {
     if (loginUser.id) {
       profileForm.setFieldsValue({
         userName: loginUser.userName,
-        userAvatar: loginUser.userAvatar,
         userProfile: loginUser.userProfile,
       })
     }
@@ -63,6 +69,100 @@ export default function UserProfilePage() {
     }
   }
 
+  const handleAvatarFileSelect = (file: File) => {
+    // 使用统一的图片验证工具
+    import('@/lib/utils/imageCompress').then(({ validateImageFile }) => {
+      // 验证图片
+      const validation = validateImageFile(file, 5 * 1024 * 1024) // 5MB
+      if (!validation.valid) {
+        message.error(validation.error)
+        return
+      }
+
+      // 检查图片尺寸，如果较大则显示裁剪界面
+      const img = new Image()
+      img.onload = () => {
+        if (img.width > 800 || img.height > 800) {
+          setSelectedAvatarFile(file)
+          setCropperVisible(true)
+        } else {
+          // 直接上传
+          handleAvatarUpload(file)
+        }
+      }
+      img.onerror = () => {
+        message.error('图片加载失败')
+      }
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  const handleAvatarUpload = async (avatarFile: File) => {
+    setAvatarLoading(true)
+    try {
+      // 使用统一的图片压缩工具
+      const { compressImage } = await import('@/lib/utils/imageCompress')
+      
+      // 压缩图片
+      const compressedFile = await compressImage(avatarFile, {
+        maxWidth: 800,
+        maxHeight: 800,
+        quality: 0.8,
+      })
+
+      // 上传压缩后的头像
+      const uploadRes = await fileApi.uploadAvatar(compressedFile, loginUser.id)
+      
+      // 后端返回格式: { code: 200, data: "url", message: "..." }
+      // axios 响应格式: response.data = { code: 200, data: "url", message: "..." }
+      let avatarUrl: string | undefined
+      
+      if (uploadRes.data) {
+        // 检查是否是 BaseResponse 格式
+        if (uploadRes.data.data !== undefined) {
+          avatarUrl = uploadRes.data.data
+        } else if (typeof uploadRes.data === 'string') {
+          // 如果直接返回字符串
+          avatarUrl = uploadRes.data
+        }
+      }
+      
+      if (avatarUrl && typeof avatarUrl === 'string') {
+        // 更新用户资料中的头像
+        const updateRes = await updateMyProfile({
+          userAvatar: avatarUrl,
+        })
+        
+        if (updateRes.data.code === 200) {
+          message.success('头像上传成功')
+          // 刷新用户信息
+          await fetchLoginUser()
+        } else {
+          message.error('头像更新失败：' + (updateRes.data.message || '未知错误'))
+        }
+      } else {
+        const errorMsg = '头像上传失败：返回数据格式错误'
+        console.error('头像上传响应格式错误:', uploadRes.data)
+        message.error(errorMsg)
+      }
+    } catch (error: any) {
+      console.error('头像上传失败:', error)
+      message.error('头像上传失败，请重试')
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
+  const handleAvatarCropComplete = async (croppedFile: File) => {
+    setCropperVisible(false)
+    await handleAvatarUpload(croppedFile)
+    setSelectedAvatarFile(null)
+  }
+
+  const handleAvatarUploadRequest: UploadProps['customRequest'] = async ({ file }) => {
+    handleAvatarFileSelect(file as File)
+  }
+
   return (
     <GlobalLayout>
       <div style={{ 
@@ -77,7 +177,57 @@ export default function UserProfilePage() {
         <Card title="基本信息" style={{ marginBottom: '24px' }}>
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Space>
-              <Avatar size={64} icon={<UserOutlined />} src={loginUser.userAvatar} />
+              <Upload
+                customRequest={handleAvatarUploadRequest}
+                showUploadList={false}
+                accept="image/*"
+                disabled={avatarLoading}
+              >
+                <div style={{ position: 'relative', cursor: 'pointer' }}>
+                  <Avatar 
+                    size={64} 
+                    icon={<UserOutlined />} 
+                    src={loginUser.userAvatar}
+                    style={{ 
+                      border: '2px solid #d9d9d9',
+                      transition: 'all 0.3s',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      right: 0,
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: '#1890ff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      border: '2px solid white',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      document.querySelector('input[type="file"]')?.click()
+                    }}
+                  >
+                    {avatarLoading ? (
+                      <div style={{ 
+                        width: '12px', 
+                        height: '12px', 
+                        border: '2px solid white',
+                        borderTopColor: 'transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                      }} />
+                    ) : (
+                      <UploadOutlined style={{ color: 'white', fontSize: '12px' }} />
+                    )}
+                  </div>
+                </div>
+              </Upload>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
                   {loginUser.userName}
@@ -101,13 +251,6 @@ export default function UserProfilePage() {
                 rules={[{ required: true, message: '请输入用户昵称' }]}
               >
                 <Input placeholder="请输入用户昵称" />
-              </Form.Item>
-
-              <Form.Item
-                label="用户头像"
-                name="userAvatar"
-              >
-                <Input placeholder="请输入头像URL" />
               </Form.Item>
 
               <Form.Item
@@ -181,6 +324,20 @@ export default function UserProfilePage() {
           </Form>
         </Card>
       </div>
+
+      {/* 头像裁剪弹窗 */}
+      <ImageCropper
+        visible={cropperVisible}
+        imageFile={selectedAvatarFile}
+        onCrop={handleAvatarCropComplete}
+        onCancel={() => {
+          setCropperVisible(false)
+          setSelectedAvatarFile(null)
+        }}
+        aspectRatio={1}
+        maxWidth={800}
+        maxHeight={800}
+      />
     </GlobalLayout>
   )
 }

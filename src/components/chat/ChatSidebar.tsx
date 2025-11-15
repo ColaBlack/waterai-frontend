@@ -63,6 +63,7 @@ export default function ChatSidebar({
             currentChatId={currentChatId}
             loading={loading}
             onSwitch={onSwitch}
+            onRefresh={onRefresh}
           />
         </div>
 

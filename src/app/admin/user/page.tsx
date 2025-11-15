@@ -1,12 +1,15 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Table, Button, Space, Modal, Form, Input, Select, Image, message, Card, Avatar, Tag } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons'
+import { Table, Button, Space, Modal, Form, Input, Select, Image, App, Card, Avatar, Tag, Upload } from 'antd'
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UserOutlined, CameraOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import type { UploadFile } from 'antd/es/upload/interface'
 import GlobalLayout from '@/components/GlobalLayout'
 import { addUser, deleteUser, listUserByPage, updateUser } from '@/api/userService/userController'
 import { USER_ROLE } from '@/lib/constants/roleEnums'
+import { fileApi } from '@/api/file'
+import { compressImage, validateImageFile } from '@/lib/utils/imageCompress'
 
 interface UserQueryParams {
   current: number
@@ -15,6 +18,7 @@ interface UserQueryParams {
 }
 
 export default function UserManagePage() {
+  const { message } = App.useApp()
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<API.User[]>([])
   const [total, setTotal] = useState(0)
@@ -27,6 +31,11 @@ export default function UserManagePage() {
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [editingUser, setEditingUser] = useState<API.User | null>(null)
+  const [addAvatarFile, setAddAvatarFile] = useState<File | null>(null)
+  const [addAvatarUrl, setAddAvatarUrl] = useState<string>('')
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null)
+  const [editAvatarUrl, setEditAvatarUrl] = useState<string>('')
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
   const [addForm] = Form.useForm()
   const [editForm] = Form.useForm()
@@ -74,11 +83,38 @@ export default function UserManagePage() {
   // 处理新增用户
   const handleAddUser = async (values: API.UserAddRequest) => {
     try {
-      const res = await addUser(values)
+      // 如果有头像文件，先上传
+      let avatarUrl = values.userAvatar || ''
+      if (addAvatarFile) {
+        setIsUploadingAvatar(true)
+        try {
+          const compressedFile = await compressImage(addAvatarFile, {
+            maxWidth: 800,
+            maxHeight: 800,
+            quality: 0.8,
+          })
+          // 创建新用户时使用userId=0上传头像，用户创建后会关联到正确的用户
+          const response = await fileApi.uploadAvatar(compressedFile, 0)
+          if (typeof response.data === 'string') {
+            avatarUrl = response.data
+          } else if (response.data && 'data' in response.data) {
+            avatarUrl = (response.data as any).data || ''
+          }
+        } catch (error) {
+          message.error('头像上传失败')
+          setIsUploadingAvatar(false)
+          return
+        }
+        setIsUploadingAvatar(false)
+      }
+
+      const res = await addUser({ ...values, userAvatar: avatarUrl })
       if (res.data.code === 200) {
         message.success('新增用户成功')
         setAddModalVisible(false)
         addForm.resetFields()
+        setAddAvatarFile(null)
+        setAddAvatarUrl('')
         loadData()
       } else {
         message.error('新增用户失败: ' + res.data.message)
@@ -91,10 +127,11 @@ export default function UserManagePage() {
   // 打开编辑对话框
   const handleEditClick = (record: API.User) => {
     setEditingUser(record)
+    setEditAvatarUrl(record.userAvatar || '')
+    setEditAvatarFile(null)
     editForm.setFieldsValue({
       id: record.id,
       userName: record.userName,
-      userAvatar: record.userAvatar,
       userProfile: record.userProfile,
       userRole: record.userRole,
     })
@@ -104,11 +141,37 @@ export default function UserManagePage() {
   // 处理编辑用户
   const handleEditUser = async (values: API.UserUpdateRequest) => {
     try {
-      const res = await updateUser({ ...values, id: editingUser!.id! })
+      // 如果有新的头像文件，先上传
+      let avatarUrl = editAvatarUrl
+      if (editAvatarFile) {
+        setIsUploadingAvatar(true)
+        try {
+          const compressedFile = await compressImage(editAvatarFile, {
+            maxWidth: 800,
+            maxHeight: 800,
+            quality: 0.8,
+          })
+          const response = await fileApi.uploadAvatar(compressedFile, editingUser!.id!)
+          if (typeof response.data === 'string') {
+            avatarUrl = response.data
+          } else if (response.data && 'data' in response.data) {
+            avatarUrl = (response.data as any).data || ''
+          }
+        } catch (error) {
+          message.error('头像上传失败')
+          setIsUploadingAvatar(false)
+          return
+        }
+        setIsUploadingAvatar(false)
+      }
+
+      const res = await updateUser({ ...values, id: editingUser!.id!, userAvatar: avatarUrl })
       if (res.data.code === 200) {
         message.success('修改用户成功')
         setEditModalVisible(false)
         editForm.resetFields()
+        setEditAvatarFile(null)
+        setEditAvatarUrl('')
         loadData()
       } else {
         message.error('修改用户失败: ' + res.data.message)
@@ -320,11 +383,46 @@ export default function UserManagePage() {
               <Input placeholder="请输入用户昵称" />
             </Form.Item>
 
+            <Form.Item label="用户头像">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <Avatar size={80} src={addAvatarUrl || undefined} icon={<UserOutlined />} />
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    const validation = validateImageFile(file, 5 * 1024 * 1024)
+                    if (!validation.valid) {
+                      message.error(validation.error)
+                      return false
+                    }
+                    setAddAvatarFile(file)
+                    const reader = new FileReader()
+                    reader.onload = (e) => setAddAvatarUrl(e.target?.result as string)
+                    reader.readAsDataURL(file)
+                    return false
+                  }}
+                >
+                  <Button icon={<CameraOutlined />}>选择头像</Button>
+                </Upload>
+                {addAvatarUrl && <Button danger onClick={() => { setAddAvatarFile(null); setAddAvatarUrl('') }}>移除</Button>}
+              </div>
+            </Form.Item>
+
             <Form.Item
-              label="用户头像"
-              name="userAvatar"
+              label="用户密码"
+              name="userPassword"
+              rules={[
+                { required: true, message: '请输入用户密码' },
+                { min: 6, message: '密码长度不能少于6位' },
+                { max: 20, message: '密码长度不能超过20位' },
+                { pattern: /^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{6,20}$/, message: '密码由字母、数字组成，且不能全为数字或全为字母' }
+              ]}
             >
-              <Input placeholder="请输入头像URL" />
+              <Input.Password placeholder="请输入用户密码" />
+            </Form.Item>
+
+            <Form.Item label="用户简介" name="userProfile">
+              <Input.TextArea rows={3} placeholder="请输入用户简介" />
             </Form.Item>
 
             <Form.Item
@@ -348,8 +446,11 @@ export default function UserManagePage() {
           onCancel={() => {
             setEditModalVisible(false)
             editForm.resetFields()
+            setEditAvatarFile(null)
+            setEditAvatarUrl('')
           }}
           onOk={() => editForm.submit()}
+          confirmLoading={isUploadingAvatar}
           width={600}
         >
           <Form
@@ -369,11 +470,29 @@ export default function UserManagePage() {
               <Input placeholder="请输入用户昵称" />
             </Form.Item>
 
-            <Form.Item
-              label="用户头像"
-              name="userAvatar"
-            >
-              <Input placeholder="请输入头像URL" />
+            <Form.Item label="用户头像">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <Avatar size={80} src={editAvatarUrl || undefined} icon={<UserOutlined />} />
+                <Upload
+                  accept="image/*"
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    const validation = validateImageFile(file, 5 * 1024 * 1024)
+                    if (!validation.valid) {
+                      message.error(validation.error)
+                      return false
+                    }
+                    setEditAvatarFile(file)
+                    const reader = new FileReader()
+                    reader.onload = (e) => setEditAvatarUrl(e.target?.result as string)
+                    reader.readAsDataURL(file)
+                    return false
+                  }}
+                >
+                  <Button icon={<CameraOutlined />}>更换头像</Button>
+                </Upload>
+                {editAvatarUrl && <Button danger onClick={() => { setEditAvatarFile(null); setEditAvatarUrl('') }}>移除</Button>}
+              </div>
             </Form.Item>
 
             <Form.Item

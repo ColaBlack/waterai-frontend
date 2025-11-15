@@ -9,7 +9,7 @@ export async function getChatRoom(
   options?: { [key: string]: any }
 ) {
   const { chatroomId: param0, ...queryParams } = params;
-  return request<API.BaseResponseChatRoomVO>(`/chat-room/${param0}`, {
+  return request<API.BaseResponseChatRoomVO>(`/ai/chat-room/${param0}`, {
     method: "GET",
     params: {
       ...queryParams,
@@ -26,7 +26,7 @@ export async function getChatRoomMessages(
 ) {
   const { chatroomId: param0, ...queryParams } = params;
   return request<API.BaseResponseListChatMemoryVO>(
-    `/chat-room/${param0}/messages`,
+    `/ai/chat-room/${param0}/messages`,
     {
       method: "GET",
       params: {
@@ -42,7 +42,7 @@ export async function createChatRoom(
   body: API.ChatRoomAddRequest,
   options?: { [key: string]: any }
 ) {
-  return request<API.BaseResponseChatRoomVO>("/chat-room/create", {
+  return request<API.BaseResponseChatRoomVO>("/ai/chat-room/create", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -58,7 +58,7 @@ export async function listChatRooms(
   params: API.listChatRoomsParams,
   options?: { [key: string]: any }
 ) {
-  return request<API.BaseResponseListChatRoomVO>("/chat-room/list", {
+  return request<API.BaseResponseListChatRoomVO>("/ai/chat-room/list", {
     method: "GET",
     params: {
       ...params,

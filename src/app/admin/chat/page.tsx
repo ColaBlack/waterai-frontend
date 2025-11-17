@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Table, Button, Space, Modal, Card, App, Tabs, Avatar, Image } from 'antd'
+import { Table, Button, Space, Modal, Card, App, Tabs, Avatar, Image, Collapse } from 'antd'
 import { DeleteOutlined, EyeOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import GlobalLayout from '@/components/GlobalLayout'
 import request from '@/lib/utils/request'
+import { CopyButton } from '@/components/chat/CopyButton'
 
 interface ChatRoom {
   chatroom: string
@@ -304,13 +305,89 @@ export default function AdminChatManagePage() {
                     style={{
                       maxWidth: '70%',
                       padding: '12px 16px',
-                      backgroundColor: isUserMessage ? '#1890ff' : '#f0f0f0',
-                      color: isUserMessage ? '#fff' : '#000',
+                      backgroundColor: '#f0f0f0',
+                      color: '#000',
                       borderRadius: '12px',
                       wordBreak: 'break-word',
                     }}
                   >
-                  <div>{msg.content}</div>
+                  {/* 处理 AI 消息中的 <think> 标签 */}
+                  {isAssistantMessage && msg.content.includes('<think>') ? (
+                    <div>
+                      {(() => {
+                        const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
+                        const parts: React.ReactNode[] = [];
+                        let lastIndex = 0;
+                        let match;
+                        let thinkIndex = 0;
+
+                        while ((match = thinkRegex.exec(msg.content)) !== null) {
+                          // 添加 <think> 之前的文本
+                          if (match.index > lastIndex) {
+                            parts.push(
+                              <span key={`text-${lastIndex}`}>
+                                {msg.content.substring(lastIndex, match.index)}
+                              </span>
+                            );
+                          }
+
+                          // 添加折叠的思考内容
+                          const thinkContent = match[1];
+                          parts.push(
+                            <Collapse
+                              key={`think-${thinkIndex}`}
+                              ghost
+                              style={{ 
+                                marginTop: '8px', 
+                                marginBottom: '8px',
+                                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                                borderRadius: '6px'
+                              }}
+                              items={[
+                                {
+                                  key: '1',
+                                  label: (
+                                    <span style={{ 
+                                      fontWeight: 500,
+                                      color: '#1890ff'
+                                    }}>
+                                      💭 深度思考过程
+                                    </span>
+                                  ),
+                                  children: (
+                                    <div style={{ 
+                                      whiteSpace: 'pre-wrap',
+                                      fontStyle: 'italic',
+                                      color: '#666',
+                                      padding: '8px'
+                                    }}>
+                                      {thinkContent}
+                                    </div>
+                                  )
+                                }
+                              ]}
+                            />
+                          );
+
+                          lastIndex = match.index + match[0].length;
+                          thinkIndex++;
+                        }
+
+                        // 添加最后的文本
+                        if (lastIndex < msg.content.length) {
+                          parts.push(
+                            <span key={`text-${lastIndex}`}>
+                              {msg.content.substring(lastIndex)}
+                            </span>
+                          );
+                        }
+
+                        return parts;
+                      })()}
+                    </div>
+                  ) : (
+                    <div>{msg.content}</div>
+                  )}
                   {msg.imageUrls && msg.imageUrls.length > 0 && (
                     <div style={{ marginTop: '8px' }}>
                       <Image.PreviewGroup>
@@ -329,9 +406,13 @@ export default function AdminChatManagePage() {
                     <div style={{ 
                       fontSize: '12px', 
                       marginTop: '4px',
-                      opacity: 0.7
+                      opacity: 0.7,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
                     }}>
-                      {msg.createTime}
+                      <span>{msg.createTime}</span>
+                      <CopyButton text={msg.content} />
                     </div>
                   )}
                   </div>

@@ -48,7 +48,7 @@ export default function MessageActions({
       }}
     >
       <span>{formatTimestamp(timestamp)}</span>
-      {!isUser && !isStreaming && (
+      {!isStreaming && (
         <Button
           type="text"
           size="small"

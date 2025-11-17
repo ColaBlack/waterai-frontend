@@ -10,6 +10,7 @@ import { addUser, deleteUser, listUserByPage, updateUser } from '@/api/userServi
 import { USER_ROLE } from '@/lib/constants/roleEnums'
 import { fileApi } from '@/api/file'
 import { compressImage, validateImageFile } from '@/lib/utils/imageCompress'
+import { ImageCropper } from '@/components/ui/image-cropper'
 
 interface UserQueryParams {
   current: number
@@ -36,6 +37,9 @@ export default function UserManagePage() {
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null)
   const [editAvatarUrl, setEditAvatarUrl] = useState<string>('')
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [cropperVisible, setCropperVisible] = useState(false)
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
 
   const [addForm] = Form.useForm()
   const [editForm] = Form.useForm()
@@ -395,10 +399,9 @@ export default function UserManagePage() {
                       message.error(validation.error)
                       return false
                     }
-                    setAddAvatarFile(file)
-                    const reader = new FileReader()
-                    reader.onload = (e) => setAddAvatarUrl(e.target?.result as string)
-                    reader.readAsDataURL(file)
+                    setSelectedAvatarFile(file)
+                    setIsEditMode(false)
+                    setCropperVisible(true)
                     return false
                   }}
                 >
@@ -482,10 +485,9 @@ export default function UserManagePage() {
                       message.error(validation.error)
                       return false
                     }
-                    setEditAvatarFile(file)
-                    const reader = new FileReader()
-                    reader.onload = (e) => setEditAvatarUrl(e.target?.result as string)
-                    reader.readAsDataURL(file)
+                    setSelectedAvatarFile(file)
+                    setIsEditMode(true)
+                    setCropperVisible(true)
                     return false
                   }}
                 >
@@ -516,6 +518,33 @@ export default function UserManagePage() {
           </Form>
         </Modal>
       </div>
+      
+      {/* 头像裁剪弹窗 */}
+      <ImageCropper
+        visible={cropperVisible}
+        imageFile={selectedAvatarFile}
+        aspectRatio={1}
+        cropShape="circle"
+        onCrop={(croppedFile) => {
+          if (isEditMode) {
+            setEditAvatarFile(croppedFile)
+            const reader = new FileReader()
+            reader.onload = (e) => setEditAvatarUrl(e.target?.result as string)
+            reader.readAsDataURL(croppedFile)
+          } else {
+            setAddAvatarFile(croppedFile)
+            const reader = new FileReader()
+            reader.onload = (e) => setAddAvatarUrl(e.target?.result as string)
+            reader.readAsDataURL(croppedFile)
+          }
+          setCropperVisible(false)
+          setSelectedAvatarFile(null)
+        }}
+        onCancel={() => {
+          setCropperVisible(false)
+          setSelectedAvatarFile(null)
+        }}
+      />
     </GlobalLayout>
   )
 }

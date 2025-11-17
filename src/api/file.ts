@@ -1,7 +1,7 @@
 import request from '@/lib/utils/request';
 
 /**
- * 文件上传API
+ * 图片上传API（使用图床服务）
  */
 export const fileApi = {
   /**
@@ -14,7 +14,7 @@ export const fileApi = {
       formData.append('folder', folder);
     }
     
-    return request.post<string>('/file/upload', formData, {
+    return request.post<string>('/image/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -29,7 +29,7 @@ export const fileApi = {
     formData.append('file', file);
     formData.append('userId', userId.toString());
     
-    return request.post<string>('/file/upload/avatar', formData, {
+    return request.post<string>('/image/upload/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -44,7 +44,7 @@ export const fileApi = {
     formData.append('file', file);
     formData.append('chatId', chatId);
     
-    return request.post<string>('/file/upload/chat-image', formData, {
+    return request.post<string>('/image/upload/chat-image', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -55,7 +55,7 @@ export const fileApi = {
    * 删除文件
    */
   deleteFile: (fileUrl: string) => {
-    return request.delete<boolean>('/file/delete', {
+    return request.delete<boolean>('/image/delete', {
       params: { fileUrl },
     });
   },

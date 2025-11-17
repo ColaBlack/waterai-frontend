@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CameraOutlined, UploadOutlined, CloseOutlined } from '@ant-design/icons';
-import { Button, Avatar, message } from 'antd';
+import { CameraOutlined, UploadOutlined, CloseOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Button, Avatar, message, Spin } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { fileApi } from '@/api/file';
 import { cn } from '@/lib/utils';
@@ -131,7 +131,7 @@ export function AvatarUpload({
         {/* 上传进度指示器 */}
         {isUploading && (
           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-            <div className="text-white text-xs">上传中...</div>
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 24, color: '#fff' }} spin />} />
           </div>
         )}
       </div>

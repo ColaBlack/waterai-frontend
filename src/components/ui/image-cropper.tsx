@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Modal, Button, Slider, Space } from 'antd'
-import { ZoomInOutlined, ZoomOutOutlined, RotateLeftOutlined, RotateRightOutlined } from '@ant-design/icons'
+import { Modal, Button, Slider, Space, Radio, Switch } from 'antd'
+import { ZoomInOutlined, ZoomOutOutlined, RotateLeftOutlined, RotateRightOutlined, BorderOutlined, RadiusSettingOutlined } from '@ant-design/icons'
 
 interface ImageCropperProps {
   /** 是否显示裁剪弹窗 */
@@ -19,7 +19,11 @@ interface ImageCropperProps {
   maxWidth?: number
   /** 最大高度 */
   maxHeight?: number
+  /** 裁剪形状 */
+  cropShape?: 'rect' | 'circle'
 }
+
+type CropShape = 'rect' | 'circle'
 
 export function ImageCropper({
   visible,
@@ -29,6 +33,7 @@ export function ImageCropper({
   aspectRatio,
   maxWidth = 1920,
   maxHeight = 1920,
+  cropShape: initialCropShape = 'rect',
 }: ImageCropperProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -45,6 +50,9 @@ export function ImageCropper({
     height: 0,
     img: null,
   })
+  const [cropShape, setCropShape] = useState<CropShape>(initialCropShape)
+  const [showGrid, setShowGrid] = useState(true)
+  const [showGuides, setShowGuides] = useState(true)
 
   const CANVAS_WIDTH = 600
   const CANVAS_HEIGHT = 400
@@ -149,31 +157,120 @@ export function ImageCropper({
     ctx.setLineDash([])
     ctx.strokeRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
     
-    // 绘制裁剪框的四个角
-    const cornerSize = 20
-    ctx.fillStyle = '#1890ff'
-    
-    // 左上角
-    ctx.fillRect(cropArea.x - 2, cropArea.y - 2, cornerSize, 4)
-    ctx.fillRect(cropArea.x - 2, cropArea.y - 2, 4, cornerSize)
-    
-    // 右上角
-    ctx.fillRect(cropArea.x + cropArea.width - cornerSize, cropArea.y - 2, cornerSize, 4)
-    ctx.fillRect(cropArea.x + cropArea.width - 2, cropArea.y - 2, 4, cornerSize)
-    
-    // 左下角
-    ctx.fillRect(cropArea.x - 2, cropArea.y + cropArea.height - 2, cornerSize, 4)
-    ctx.fillRect(cropArea.x - 2, cropArea.y + cropArea.height - cornerSize, 4, cornerSize)
-    
-    // 右下角
-    ctx.fillRect(cropArea.x + cropArea.width - cornerSize, cropArea.y + cropArea.height - 2, cornerSize, 4)
-    ctx.fillRect(cropArea.x + cropArea.width - 2, cropArea.y + cropArea.height - cornerSize, 4, cornerSize)
+    // 绘制裁剪框
+    if (cropShape === 'circle') {
+      // 圆形裁剪框
+      const centerX = cropArea.x + cropArea.width / 2
+      const centerY = cropArea.y + cropArea.height / 2
+      const radius = Math.min(cropArea.width, cropArea.height) / 2
+      
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+      ctx.strokeStyle = '#1890ff'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      
+      // 绘制圆形裁剪框的控制点
+      const controlPoints = [
+        { x: centerX, y: centerY - radius }, // 上
+        { x: centerX + radius, y: centerY }, // 右
+        { x: centerX, y: centerY + radius }, // 下
+        { x: centerX - radius, y: centerY }, // 左
+      ]
+      
+      ctx.fillStyle = '#1890ff'
+      controlPoints.forEach(point => {
+        ctx.beginPath()
+        ctx.arc(point.x, point.y, 6, 0, 2 * Math.PI)
+        ctx.fill()
+      })
+    } else {
+      // 矩形裁剪框
+      // 绘制裁剪框的四个角
+      const cornerSize = 20
+      ctx.fillStyle = '#1890ff'
+      
+      // 左上角
+      ctx.fillRect(cropArea.x - 2, cropArea.y - 2, cornerSize, 4)
+      ctx.fillRect(cropArea.x - 2, cropArea.y - 2, 4, cornerSize)
+      
+      // 右上角
+      ctx.fillRect(cropArea.x + cropArea.width - cornerSize, cropArea.y - 2, cornerSize, 4)
+      ctx.fillRect(cropArea.x + cropArea.width - 2, cropArea.y - 2, 4, cornerSize)
+      
+      // 左下角
+      ctx.fillRect(cropArea.x - 2, cropArea.y + cropArea.height - 2, cornerSize, 4)
+      ctx.fillRect(cropArea.x - 2, cropArea.y + cropArea.height - cornerSize, 4, cornerSize)
+      
+      // 右下角
+      ctx.fillRect(cropArea.x + cropArea.width - cornerSize, cropArea.y + cropArea.height - 2, cornerSize, 4)
+      ctx.fillRect(cropArea.x + cropArea.width - 2, cropArea.y + cropArea.height - cornerSize, 4, cornerSize)
+      
+      // 绘制九宫格参考线
+      if (showGrid) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+        ctx.lineWidth = 1
+        ctx.setLineDash([5, 5])
+        
+        // 垂直线
+        for (let i = 1; i < 3; i++) {
+          const x = cropArea.x + (cropArea.width / 3) * i
+          ctx.beginPath()
+          ctx.moveTo(x, cropArea.y)
+          ctx.lineTo(x, cropArea.y + cropArea.height)
+          ctx.stroke()
+        }
+        
+        // 水平线
+        for (let i = 1; i < 3; i++) {
+          const y = cropArea.y + (cropArea.height / 3) * i
+          ctx.beginPath()
+          ctx.moveTo(cropArea.x, y)
+          ctx.lineTo(cropArea.x + cropArea.width, y)
+          ctx.stroke()
+        }
+        
+        ctx.setLineDash([])
+      }
+      
+      // 绘制中心参考线
+      if (showGuides) {
+        ctx.strokeStyle = 'rgba(24, 144, 255, 0.8)'
+        ctx.lineWidth = 1
+        ctx.setLineDash([3, 3])
+        
+        // 垂直中心线
+        const centerX = cropArea.x + cropArea.width / 2
+        ctx.beginPath()
+        ctx.moveTo(centerX, cropArea.y)
+        ctx.lineTo(centerX, cropArea.y + cropArea.height)
+        ctx.stroke()
+        
+        // 水平中心线
+        const centerY = cropArea.y + cropArea.height / 2
+        ctx.beginPath()
+        ctx.moveTo(cropArea.x, centerY)
+        ctx.lineTo(cropArea.x + cropArea.width, centerY)
+        ctx.stroke()
+        
+        ctx.setLineDash([])
+      }
+    }
     
     // 清除裁剪区域外的内容
     ctx.globalCompositeOperation = 'destination-in'
     ctx.fillStyle = '#000'
-    ctx.fillRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
-  }, [imageSrc, scale, rotation, position, cropArea, imageData])
+    if (cropShape === 'circle') {
+      const centerX = cropArea.x + cropArea.width / 2
+      const centerY = cropArea.y + cropArea.height / 2
+      const radius = Math.min(cropArea.width, cropArea.height) / 2
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+      ctx.fill()
+    } else {
+      ctx.fillRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
+    }
+  }, [imageSrc, scale, rotation, position, cropArea, imageData, cropShape, showGrid, showGuides])
 
   // 处理鼠标拖拽
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -208,6 +305,14 @@ export function ImageCropper({
 
   const handleMouseUp = () => {
     setIsDragging(false)
+  }
+
+  // 处理鼠标滚轮缩放
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    e.stopPropagation() // 阻止事件冒泡，防止页面滚动
+    const delta = e.deltaY > 0 ? -0.1 : 0.1
+    setScale(prev => Math.max(0.5, Math.min(3, prev + delta)))
   }
 
   // 裁剪图片
@@ -318,9 +423,14 @@ export function ImageCropper({
           </Button>
         </Space>
       }
+      styles={{
+        body: {
+          overflowY: 'hidden' // 禁止 Modal 内容区域滚动
+        }
+      }}
     >
       <div style={{ marginBottom: '16px' }}>
-        <Space>
+        <Space wrap>
           <Button
             icon={<ZoomOutOutlined />}
             onClick={() => setScale(Math.max(0.5, scale - 0.1))}
@@ -348,6 +458,33 @@ export function ImageCropper({
         </Space>
       </div>
       
+      <div style={{ marginBottom: '16px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div>
+          <span style={{ marginRight: '8px' }}>裁剪形状:</span>
+          <Radio.Group value={cropShape} onChange={(e) => setCropShape(e.target.value)}>
+            <Radio.Button value="rect">
+              <BorderOutlined /> 矩形
+            </Radio.Button>
+            <Radio.Button value="circle">
+              <RadiusSettingOutlined /> 圆形
+            </Radio.Button>
+          </Radio.Group>
+        </div>
+        
+        {cropShape === 'rect' && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>九宫格:</span>
+              <Switch checked={showGrid} onChange={setShowGrid} size="small" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>中心线:</span>
+              <Switch checked={showGuides} onChange={setShowGuides} size="small" />
+            </div>
+          </>
+        )}
+      </div>
+      
       <div
         ref={containerRef}
         style={{
@@ -356,6 +493,10 @@ export function ImageCropper({
           borderRadius: '4px',
           overflow: 'hidden',
           background: '#f5f5f5',
+        }}
+        onWheel={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
         }}
       >
         <canvas
@@ -368,11 +509,15 @@ export function ImageCropper({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
         />
       </div>
       
       <div style={{ marginTop: '16px' }}>
-        <div style={{ marginBottom: '8px' }}>缩放: {Math.round(scale * 100)}%</div>
+        <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>缩放: {Math.round(scale * 100)}%</span>
+          <span style={{ fontSize: '12px', color: '#999' }}>提示: 使用鼠标滚轮可快速缩放</span>
+        </div>
         <Slider
           min={50}
           max={300}

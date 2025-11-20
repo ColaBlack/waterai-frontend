@@ -30,12 +30,6 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
     
     switch (action.type) {
       case 'SET_MESSAGES':
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Reducer] SET_MESSAGES:', {
-            messageCount: action.payload.length,
-            renderCounter: state.renderCounter + 1
-          })
-        }
         newState = {
           messages: action.payload,
           renderCounter: state.renderCounter + 1
@@ -95,9 +89,6 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
               textToAppend = action.payload.text
             } else if (typeof action.payload.text === 'object') {
               // 如果是对象，不追加（避免显示 [object Object]）
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('[Reducer] Blocked object from being added to message content:', action.payload.text)
-              }
               textToAppend = ''
             } else {
               // 其他类型，尝试转换为字符串
@@ -115,10 +106,7 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
                 !currentContent.includes('```json') && // 不在JSON代码块中
                 !trimmed.includes('\n') && // 不是多行JSON（工具调用的JSON通常是多行的）
                 trimmed.length < 200) { // 不是很长的JSON（工具调用的JSON通常较长）
-              // 看起来像纯JSON响应对象，不追加到消息内容中
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('[Reducer] Blocked pure JSON response from being added to message content:', trimmed.substring(0, 100))
-              }
+              // 看起来像JSON响应对象，不追加到消息内容中
               textToAppend = ''
             }
           }
@@ -251,17 +239,6 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
             timestamp: contentChanged ? Date.now() : currentMessage.timestamp
           }
           
-          // 开发环境调试日志
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Reducer] UPDATE_LAST_AI_MESSAGE:', {
-              textLength: textToAppend.length,
-              totalContentLength: newContent.length,
-              contentChanged,
-              metadataChanged,
-              hasMetadata: !!action.payload.metadata,
-              messageCount: newMessages.length
-            })
-          }
           
           newState = {
             messages: newMessages,
@@ -269,9 +246,6 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
           }
           messagesRef.current = newMessages
           return newState
-        }
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[Reducer] UPDATE_LAST_AI_MESSAGE: No AI message to update')
         }
         return state
       }
@@ -347,9 +321,6 @@ export function useChatMessages(
 
     // 如果正在发送第一条消息，不要加载历史消息（避免覆盖正在发送的消息）
     if (isSendingFirstMessageRef.current) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[loadHistoryMessages] Skipping load - first message in progress')
-      }
       return
     }
 
@@ -403,9 +374,6 @@ export function useChatMessages(
           messagesRef.current = []
         } else {
           // 当前有消息但后端没有消息，可能是正在发送第一条消息，保留当前消息
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[loadHistoryMessages] Preserving current messages, backend has no messages yet')
-          }
         }
         return
       }
@@ -428,19 +396,9 @@ export function useChatMessages(
       if (isChatRoomNotExists) {
         // 聊天室不存在是正常情况（新聊天室），静默处理
         // 这是预期的行为，不应该显示错误给用户
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[loadHistoryMessages] Chat room not exists (expected for new chat), loading from local storage')
-        }
       } else {
-        // 其他错误（网络错误、服务器错误等），记录但不显示给用户
+        // 其他错误（网络错误、服务器错误等），静默处理
         // 避免干扰用户体验，因为这些错误通常是暂时的
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[loadHistoryMessages] Failed to load messages:', {
-            status,
-            errorCode,
-            errorMessage: errorMessage || 'Unknown error'
-          })
-        }
       }
     }
     
@@ -521,9 +479,6 @@ export function useChatMessages(
       } catch (error) {
         // 即使 onFirstMessage 失败，也继续发送消息
         // 因为后端会自动创建聊天室
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('onFirstMessage failed, but continuing with message send:', error)
-        }
       }
     }
 

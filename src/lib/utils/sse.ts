@@ -55,15 +55,9 @@ export class SSEClient {
       // 添加JWT token到Authorization header（仅在客户端环境）
       if (typeof window !== 'undefined') {
         const token = localStorage.getItem('token')
-        console.log('[SSE] Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
         if (token) {
           headers['Authorization'] = `Bearer ${token}`
-          console.log('[SSE] Added Authorization header:', `Bearer ${token.substring(0, 20)}...`)
-        } else {
-          console.warn('[SSE] No token found in localStorage')
         }
-      } else {
-        console.warn('[SSE] Running in server environment, no token added')
       }
       
       const response = await fetch(url, {
@@ -177,16 +171,6 @@ export class SSEClient {
             continue
           }
 
-          // 添加调试日志来查看接收到的原始数据
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[SSE] Received raw data:', {
-              dataParts: dataParts,
-              combinedData: combinedData.substring(0, 200),
-              dataLength: combinedData.length,
-              isJSON: combinedData.trim().startsWith('{'),
-              isPlainText: !combinedData.trim().startsWith('{') && !combinedData.trim().startsWith('[')
-            })
-          }
 
           // 检查是否为控制消息（如 [DONE]），但不影响空白字符的传递
           const trimmedForControl = combinedData.trim()
@@ -258,13 +242,12 @@ export class SSEClient {
         try {
           this.parseSingleJSONObject(jsonStr, options)
         } catch (error) {
-          console.warn('[SSE] Failed to parse JSON object:', error, 'JSON:', jsonStr.substring(0, 100))
+          // JSON解析失败，忽略该对象
         }
       } else {
         // 没有找到完整的JSON对象，等待更多数据
         // 但是如果缓冲区太大，可能是数据有问题，清空缓冲区
         if (this.jsonBuffer.length > 100000) {
-          console.warn('[SSE] JSON buffer too large, clearing:', this.jsonBuffer.length)
           this.jsonBuffer = ''
         }
         break
@@ -290,14 +273,6 @@ export class SSEClient {
         thinkingProcess: undefined
       })
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[SSE] Handled plain text:', {
-          textLength: text.length,
-          textPreview: text.substring(0, 100),
-          totalLength: this.lastReceivedText.length,
-          rawText: JSON.stringify(text.substring(0, 50)) // 显示原始字符串
-        })
-      }
     }
   }
 
@@ -313,9 +288,6 @@ export class SSEClient {
       sseResponse = JSON.parse(jsonStr)
     } catch (error) {
       // JSON解析失败，可能是纯文本数据，尝试作为文本处理
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[SSE] Failed to parse JSON, treating as plain text:', error, 'Text preview:', jsonStr.substring(0, 200))
-      }
       // 直接作为纯文本处理
       this.handlePlainText(jsonStr, options)
       return
@@ -380,35 +352,12 @@ export class SSEClient {
     
     // 确保 extractedText 是字符串
     if (typeof extractedText !== 'string') {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[SSE] extractedText is not a string:', typeof extractedText, extractedText)
-      }
       extractedText = ''
     }
     
-    // 开发环境调试：记录提取的文本
-    if (process.env.NODE_ENV === 'development') {
-      const resultText = sseResponse.chatResponse?.result?.output?.text
-      const resultsText = sseResponse.chatResponse?.results?.[0]?.output?.text
-      console.log('[SSE] Extracted text:', {
-        extractedText: typeof extractedText === 'string' ? extractedText.substring(0, 100) : String(extractedText),
-        extractedTextType: typeof extractedText,
-        isJSON: typeof extractedText === 'string' && extractedText.trim().startsWith('{'),
-        hasChatResponse: !!sseResponse.chatResponse,
-        hasResult: !!sseResponse.chatResponse?.result,
-        hasResults: !!sseResponse.chatResponse?.results,
-        resultTextType: typeof resultText,
-        resultText: typeof resultText === 'string' ? resultText.substring(0, 50) : String(resultText),
-        resultsTextType: typeof resultsText,
-        resultsText: typeof resultsText === 'string' ? resultsText.substring(0, 50) : String(resultsText)
-      })
-    }
     
     // 确保提取的文本是字符串类型
     if (extractedText && typeof extractedText !== 'string') {
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[SSE] extractedText is not a string, converting:', typeof extractedText)
-      }
       extractedText = String(extractedText)
     }
     
@@ -419,9 +368,6 @@ export class SSEClient {
         currentText = extractedText
       } else if (typeof extractedText === 'object') {
         // 如果是对象，不处理（避免显示 [object Object]）
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[SSE] extractedText is an object, ignoring it:', extractedText)
-        }
         currentText = ''
       } else {
         currentText = String(extractedText)
@@ -569,9 +515,6 @@ export class SSEClient {
       // 如果不是字符串，转换为字符串或清空
       if (typeof textIncrement === 'object') {
         // 对象不能直接转换为文本，清空
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('[SSE] textIncrement is an object, clearing it:', textIncrement)
-        }
         textIncrement = ''
       } else {
         textIncrement = String(textIncrement)
@@ -641,23 +584,6 @@ export class SSEClient {
         metadata: hasMetadata ? metadata : undefined
       })
       
-      // 开发环境下输出调试信息
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[SSE] Parsed JSON object:', { 
-          textIncrement: safeText ? safeText.substring(0, 100) : '(empty)',
-          textIncrementLength: safeText?.length || 0,
-          totalTextLength: this.lastReceivedText.length,
-          totalTextPreview: this.lastReceivedText.substring(0, 100),
-          hasMetadata,
-          metadataKeys: Object.keys(metadata),
-          originalTextWasJSON: textIncrement && textIncrement.trim().startsWith('{')
-        })
-      }
-    } else {
-      // 如果没有有效文本也没有元数据，记录但不传递任何内容
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[SSE] No valid text or metadata extracted from JSON, skipping message')
-      }
     }
   }
 

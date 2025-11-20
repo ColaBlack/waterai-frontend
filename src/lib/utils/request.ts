@@ -36,24 +36,13 @@ request.interceptors.request.use(
     if (typeof window !== 'undefined') {
       // 从localStorage获取JWT token
       const token = localStorage.getItem('token')
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Axios] Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'null')
-        console.log('[Axios] Request URL:', config.url)
-      }
       
       // 如果有token，添加到Authorization header
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Axios] Added Authorization header:', `Bearer ${token.substring(0, 20)}...`)
-        }
-      } else if (process.env.NODE_ENV === 'development') {
-        console.warn('[Axios] No token found in localStorage')
       }
       
       // X-User-Id由网关从JWT token中提取并添加，前端不需要手动添加
-    } else if (process.env.NODE_ENV === 'development') {
-      console.warn('[Axios] Running in server environment, no token added')
     }
     
     return config

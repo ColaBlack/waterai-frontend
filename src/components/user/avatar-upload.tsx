@@ -60,8 +60,7 @@ export function AvatarUpload({
       });
       await uploadAvatar(compressedFile);
     } catch (error) {
-      console.error('图片处理失败:', error);
-      message.error('图片处理失败，请重试');
+      message.error('图片处理失败，请重试')
     }
   };
 
@@ -76,10 +75,8 @@ export function AvatarUpload({
       onAvatarChange?.(avatarUrl);
       
       // 这里可以调用用户信息更新API
-      console.log('头像上传成功:', avatarUrl);
       
     } catch (error) {
-      console.error('头像上传失败:', error);
       alert('头像上传失败，请重试');
       setPreviewImage(null);
     } finally {
@@ -210,8 +207,7 @@ export function SimpleAvatarUpload({
       message.success('头像上传成功');
       
     } catch (error: any) {
-      console.error('头像上传失败:', error);
-      message.error(error?.response?.data?.message || error?.message || '头像上传失败，请重试');
+      message.error(error?.response?.data?.message || error?.message || '头像上传失败，请重试')
     } finally {
       setIsUploading(false);
     }

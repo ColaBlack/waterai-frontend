@@ -25,14 +25,6 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         return
       }
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[MarkdownRenderer] Rendering:', {
-          length: contentStr.length,
-          hasNewlines: contentStr.includes('\n'),
-          preview: contentStr.substring(0, 200),
-          rawContent: JSON.stringify(contentStr.substring(0, 100)) // 显示原始字符串
-        })
-      }
 
       // 尝试解析Markdown
       const html = marked.parse(contentStr) as string
@@ -47,7 +39,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
       }
       lastContentRef.current = contentStr
     } catch (error) {
-      console.error('[MarkdownRenderer] Parse error:', error)
+      // Markdown解析错误，使用原始文本
       if (contentRef.current) {
         contentRef.current.style.whiteSpace = 'pre-wrap'
         contentRef.current.textContent = contentStr

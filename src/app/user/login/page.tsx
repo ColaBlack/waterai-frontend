@@ -5,7 +5,7 @@ import { Card, Form, Input, Button, App } from 'antd'
 import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { userLogin } from '@/api/userService/userController'
+import { userLogin } from '@/lib/api/userService/api/userController'
 import { useUserStore } from '@/lib/store/userStore'
 import './login.css'
 

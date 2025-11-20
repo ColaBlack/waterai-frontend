@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { CameraOutlined, UploadOutlined, CloseOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Button, Avatar, message, Spin } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { fileApi } from '@/api/file';
+import { fileApi } from '@/lib/api/file';
 import { cn } from '@/lib/utils';
 import { compressImage, validateImageFile } from '@/lib/utils/imageCompress';
 

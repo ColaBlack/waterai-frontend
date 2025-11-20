@@ -6,9 +6,9 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UserOutline
 import type { ColumnsType } from 'antd/es/table'
 import type { UploadFile } from 'antd/es/upload/interface'
 import GlobalLayout from '@/components/GlobalLayout'
-import { addUser, deleteUser, listUserByPage, updateUser } from '@/api/userService/userController'
+import { addUser, deleteUser, listUserByPage, updateUser } from '@/lib/api/userService/api/userController'
 import { USER_ROLE } from '@/lib/constants/roleEnums'
-import { fileApi } from '@/api/file'
+import { fileApi } from '@/lib/api/file'
 import { compressImage, validateImageFile } from '@/lib/utils/imageCompress'
 import { ImageCropper } from '@/components/ui/image-cropper'
 

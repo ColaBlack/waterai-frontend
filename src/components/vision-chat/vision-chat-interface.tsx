@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SendOutlined, PictureOutlined, CloseOutlined, RobotOutlined, UserOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Button, Input, Card, Select, Space, Empty, Typography, App, Modal, Image as AntImage, Spin, Progress } from 'antd';
 import { visionChatApi, VisionChatRecord } from '@/api/vision-chat';
-import { fileApi } from '@/api/file';
+import { fileApi } from '@/lib/api/file';
 import { cn } from '@/lib/utils';
 import AvatarBadge from '@/components/chat/message/AvatarBadge';
 import { formatTimestamp } from '@/lib/utils/messageParser';

@@ -25,7 +25,7 @@ declare namespace API {
 
   type DeleteRequest = {
     /** 要删除的记录ID */
-    id: number;
+    id?: number;
   };
 
   type LoginUserVO = {

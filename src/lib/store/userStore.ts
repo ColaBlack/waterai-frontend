@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { getLoginUser } from '@/api/userService/userController'
+import { getLoginUser } from '@/lib/api/userService/api/userController'
 import ROLE_ENUM from '@/lib/constants/roleEnums'
 
 interface UserState {

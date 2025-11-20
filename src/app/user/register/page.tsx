@@ -5,7 +5,7 @@ import { Card, Form, Input, Button, App } from 'antd'
 import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { userRegister } from '@/api/userService/userController'
+import { userRegister } from '@/lib/api/userService/api/userController'
 import '../login/login.css'
 
 export default function RegisterPage() {

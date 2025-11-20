@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useReducer, type MutableRefObject } from 'react'
 import type { MessageInstance } from 'antd/es/message/interface'
 import { SSEClient } from '@/lib/utils/sse'
-import { getChatRoomMessages } from '@/api/chatService/chatRoomController'
+import { getChatRoomMessages } from '@/lib/api/chatService/api/chatRoomController'
 import { ChatMessage, ModelConfig } from '@/lib/types/chat'
 import { MESSAGE_CONSTANTS, STORAGE_KEYS, API_CONSTANTS, TIME_CONSTANTS } from '@/lib/constants/chat'
 import { BASE_URL } from '@/lib/utils/request'

@@ -2,18 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { Layout, Menu, Button, Avatar, Dropdown, message, Space } from 'antd'
+import { Layout, Menu, Button, Avatar, Dropdown, Space, App } from 'antd'
 import type { MenuProps } from 'antd'
-import { UserOutlined, LogoutOutlined, CommentOutlined, TeamOutlined, HomeOutlined, SettingOutlined, CameraOutlined, MessageOutlined } from '@ant-design/icons'
+import { UserOutlined, LogoutOutlined, CommentOutlined, TeamOutlined, HomeOutlined, SettingOutlined, CameraOutlined, MessageOutlined, BarChartOutlined, FileTextOutlined } from '@ant-design/icons'
 import Link from 'next/link'
 import { useUserStore } from '@/lib/store/userStore'
 import { checkAccess } from '@/lib/utils/checkAccess'
 import ROLE_ENUM from '@/lib/constants/roleEnums'
-import { userLogout } from '@/api/userService/userController'
+import { userLogout } from '@/lib/api/userService/api/userController'
 
 const { Header } = Layout
 
 export default function GlobalHeader() {
+  const { message } = App.useApp()
   const router = useRouter()
   const pathname = usePathname()
   const { loginUser, fetchLoginUser, logout, isLoggedIn } = useUserStore()
@@ -89,8 +90,18 @@ export default function GlobalHeader() {
       })
     }
 
-    // 如果是管理员，显示用户管理和聊天管理
+    // 如果是管理员，显示管理功能
     if (checkAccess(loginUser, ROLE_ENUM.ADMIN)) {
+      menuItems.push({
+        key: '/admin/statistics',
+        icon: <BarChartOutlined />,
+        label: <Link href="/admin/statistics">系统统计</Link>,
+      })
+      menuItems.push({
+        key: '/admin/knowledge',
+        icon: <FileTextOutlined />,
+        label: <Link href="/admin/knowledge">知识库</Link>,
+      })
       menuItems.push({
         key: '/admin/user',
         icon: <TeamOutlined />,
@@ -113,6 +124,10 @@ export default function GlobalHeader() {
       return '/ai/chat'
     } else if (pathname.startsWith('/ai/vision')) {
       return '/ai/vision'
+    } else if (pathname.startsWith('/admin/statistics')) {
+      return '/admin/statistics'
+    } else if (pathname.startsWith('/admin/knowledge')) {
+      return '/admin/knowledge'
     } else if (pathname.startsWith('/admin/chat')) {
       return '/admin/chat'
     } else if (pathname.startsWith('/admin/user')) {

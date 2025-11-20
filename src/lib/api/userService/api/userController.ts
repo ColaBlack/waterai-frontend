@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from "@/lib/utils/request";
 
-/** 创建用户（管理员） 管理员创建新用户账号，默认密码为ColaBlack123456 POST /user/add */
+/** 创建用户（管理员） 管理员创建新用户账号，需要提供密码 POST /user/add */
 export async function addUser(
   body: API.UserAddRequest,
   options?: { [key: string]: any }
@@ -32,7 +32,7 @@ export async function deleteUser(
   });
 }
 
-/** 获取当前登录用户 获取当前已登录用户的详细信息 GET /user/get/login */
+/** 获取当前登录用户 获取当前已登录用户的详细信息，支持JWT和Session认证 GET /user/get/login */
 export async function getLoginUser(options?: { [key: string]: any }) {
   return request<API.BaseResponseLoginUserVO>("/user/get/login", {
     method: "GET",

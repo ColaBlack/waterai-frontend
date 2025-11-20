@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { listChatRooms, createChatRoom as apiCreateChatRoom } from '@/api/chatService/chatRoomController'
+import { listChatRooms1 as listChatRooms, createChatRoom1 as apiCreateChatRoom } from '@/lib/api/chatService/api/chatRoomController'
 import { API_CONSTANTS, TIME_CONSTANTS } from '@/lib/constants/chat'
 import { useUserStore } from '@/lib/store/userStore'
 

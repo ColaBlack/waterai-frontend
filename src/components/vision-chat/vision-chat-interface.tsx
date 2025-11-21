@@ -3,9 +3,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SendOutlined, PictureOutlined, CloseOutlined, RobotOutlined, UserOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Button, Input, Card, Select, Space, Empty, Typography, App, Modal, Image as AntImage, Spin, Progress } from 'antd';
-import { visionChatApi, VisionChatRecord } from '@/api/vision-chat';
+import { askVisionQuestion, getChatRecords } from '@/lib/api/chatService/api/visionChatController';
 import { fileApi } from '@/lib/api/file';
 import { cn } from '@/lib/utils';
+
+// 视觉聊天记录类型定义
+interface VisionChatRecord {
+  id?: number
+  chatId?: string
+  userId?: number
+  userPrompt?: string
+  aiResponse?: string
+  content?: string
+  imageUrls?: string[]
+  visionModelType?: string
+  modelName?: string
+  messageType?: 'user' | 'ai' | 'assistant'
+  createTime?: string
+  updateTime?: string
+  [key: string]: any
+}
 import AvatarBadge from '@/components/chat/message/AvatarBadge';
 import { formatTimestamp } from '@/lib/utils/messageParser';
 import { VISION_MODELS } from '@/lib/constants/models';
@@ -59,7 +76,7 @@ export default function VisionChatInterface({
 
   const loadChatHistory = async () => {
     try {
-      const response = await visionChatApi.getChatRecords(chatId);
+      const response = await getChatRecords({ chatId });
       // 后端返回格式: { code: 200, data: VisionChatRecord[], message: "..." }
       if (response.data) {
         const data: any = response.data;

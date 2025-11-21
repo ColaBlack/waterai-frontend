@@ -1,6 +1,18 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { visionChatRoomApi, VisionChatRoomVO } from '@/api/visionChatRoom'
+import { listChatRooms, createChatRoom, deleteChatRoom } from '@/lib/api/chatService/api/visionChatRoomController'
+
+// 视觉聊天室类型定义
+interface VisionChatRoomVO {
+  id?: number
+  chatroomId?: string
+  chatroom?: string
+  userId?: number
+  title?: string
+  createTime?: string
+  updateTime?: string
+  [key: string]: any
+}
 import { API_CONSTANTS, TIME_CONSTANTS } from '@/lib/constants/chat'
 import { useUserStore } from '@/lib/store/userStore'
 
@@ -62,7 +74,7 @@ export function useVisionChatRoom(messageApi?: any) {
     setLoadingHistory(true)
     
     try {
-      const response = await visionChatRoomApi.listChatRooms()
+      const response = await listChatRooms()
 
       if (response.data) {
         const data = response.data?.data || response.data

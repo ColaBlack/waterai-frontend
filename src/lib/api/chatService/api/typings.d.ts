@@ -278,4 +278,80 @@ declare namespace API {
     createTime?: string;
     updateTime?: string;
   };
+
+  // ====== Chat Search & Export Types ======
+
+  /** 对话搜索请求 */
+  type ChatSearchRequest = {
+    /** 搜索关键词 */
+    keyword?: string;
+    /** 对话类型 */
+    chatType?: 'text' | 'vision' | 'all';
+    /** 开始时间 */
+    startTime?: string;
+    /** 结束时间 */
+    endTime?: string;
+    /** 当前页 */
+    current?: number;
+    /** 每页大小 */
+    pageSize?: number;
+  };
+
+  /** 对话搜索结果 */
+  type ChatSearchResult = {
+    /** 对话ID */
+    chatId?: string;
+    /** 对话标题 */
+    title?: string;
+    /** 对话类型 */
+    chatType?: string;
+    /** 消息数量 */
+    messageCount?: number;
+    /** 最后消息时间 */
+    lastMessageTime?: string;
+    /** 内容片段 */
+    snippet?: string;
+  };
+
+  /** 分页对话搜索结果 */
+  type PageChatSearchResult = {
+    records?: ChatSearchResult[];
+    total?: number;
+    size?: number;
+    current?: number;
+    pages?: number;
+  };
+
+  type BaseResponsePageChatSearchResult = {
+    code?: number;
+    data?: PageChatSearchResult;
+    message?: string;
+  };
+
+  type BaseResponseListString = {
+    code?: number;
+    data?: string[];
+    message?: string;
+  };
+
+  type searchMessagesInChatParams = {
+    /** 对话ID */
+    chatId: string;
+    /** 搜索关键词 */
+    keyword: string;
+  };
+
+  type exportTextChatParams = {
+    /** 对话ID */
+    chatId: string;
+    /** 导出格式 */
+    format?: 'markdown' | 'html' | 'txt' | 'json' | 'pdf';
+  };
+
+  type exportVisionChatParams = {
+    /** 对话ID */
+    chatId: string;
+    /** 导出格式 */
+    format?: 'markdown' | 'html' | 'txt' | 'json' | 'pdf';
+  };
 }

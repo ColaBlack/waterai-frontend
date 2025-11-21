@@ -8,6 +8,8 @@ import * as visionChatRoomController from "./visionChatRoomController";
 import * as chatController from "./chatController";
 import * as chatRoomController from "./chatRoomController";
 import * as statisticsController from "./statisticsController";
+import * as chatSearchController from "./chatSearchController";
+import * as chatExportController from "./chatExportController";
 export default {
   visionChatController,
   knowledgeBaseController,
@@ -15,4 +17,6 @@ export default {
   chatController,
   chatRoomController,
   statisticsController,
+  chatSearchController,
+  chatExportController,
 };

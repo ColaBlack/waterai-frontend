@@ -9,7 +9,24 @@ import VisionChatSidebar from '@/components/vision-chat/VisionChatSidebar'
 import VisionChatHeader from '@/components/vision-chat/VisionChatHeader'
 import VisionChatInterface from '@/components/vision-chat/vision-chat-interface'
 import { useUserStore } from '@/lib/store/userStore'
-import { visionChatApi, VisionChatRecord } from '@/api/vision-chat'
+import { getChatRecords } from '@/lib/api/chatService/api/visionChatController'
+
+// 视觉聊天记录类型定义
+interface VisionChatRecord {
+  id?: number
+  chatId?: string
+  userId?: number
+  userPrompt?: string
+  aiResponse?: string
+  content?: string
+  imageUrls?: string[]
+  visionModelType?: string
+  modelName?: string
+  messageType?: 'user' | 'ai' | 'assistant'
+  createTime?: string
+  updateTime?: string
+  [key: string]: any
+}
 import { useVisionChatRoom } from '@/lib/hooks/useVisionChatRoom'
 
 const { Content } = Layout

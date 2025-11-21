@@ -1,12 +1,13 @@
 'use client'
 
-import React from 'react'
-import { Button } from 'antd'
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import React, { useState } from 'react'
+import { Button, Space } from 'antd'
+import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import ChatSearchDialog from '../ChatSearchDialog'
 
 /**
  * 侧边栏头部组件
- * 包含新建对话和刷新按钮
+ * 包含新建对话、搜索和刷新按钮
  */
 interface SidebarHeaderProps {
   /** 创建新对话回调 */
@@ -18,31 +19,51 @@ interface SidebarHeaderProps {
 }
 
 export default function SidebarHeader({ onCreate, onRefresh, loading }: SidebarHeaderProps) {
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false)
+
   return (
-    <div
-      style={{
-        padding: '16px',
-        borderBottom: '1px solid #e5e6eb',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}
-    >
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={onCreate}
-        block
-        style={{ marginRight: '8px' }}
+    <>
+      <div
+        style={{
+          padding: '16px',
+          borderBottom: '1px solid #e5e6eb',
+        }}
       >
-        新建对话
-      </Button>
-      <Button
-        icon={<ReloadOutlined />}
-        onClick={onRefresh}
-        loading={loading}
+        {/* 新建对话按钮 */}
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={onCreate}
+          block
+          style={{ marginBottom: '8px' }}
+        >
+          新建对话
+        </Button>
+
+        {/* 搜索和刷新按钮 */}
+        <Space style={{ width: '100%' }}>
+          <Button
+            icon={<SearchOutlined />}
+            onClick={() => setSearchDialogOpen(true)}
+            block
+            style={{ flex: 1 }}
+          >
+            搜索对话
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={onRefresh}
+            loading={loading}
+          />
+        </Space>
+      </div>
+
+      {/* 搜索对话框 */}
+      <ChatSearchDialog
+        open={searchDialogOpen}
+        onClose={() => setSearchDialogOpen(false)}
       />
-    </div>
+    </>
   )
 }
 

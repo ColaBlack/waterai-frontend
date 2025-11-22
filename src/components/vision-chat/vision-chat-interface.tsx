@@ -63,6 +63,7 @@ export default function VisionChatInterface({
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isSendingMessageRef = useRef(false); // 标记是否正在发送消息
 
   // 加载聊天记录
   useEffect(() => {
@@ -75,6 +76,11 @@ export default function VisionChatInterface({
   }, [messages, streamingResponse]);
 
   const loadChatHistory = async () => {
+    // 如果正在发送消息，不要加载历史记录（避免覆盖正在发送的消息）
+    if (isSendingMessageRef.current) {
+      return;
+    }
+
     try {
       const response = await getChatRecords({ chatId });
       // 后端返回格式: { code: 200, data: VisionChatRecord[], message: "..." }
@@ -89,7 +95,7 @@ export default function VisionChatInterface({
       }
     } catch (error) {
       console.error('加载聊天记录失败:', error);
-      message.error('加载聊天记录失败');
+      // 静默处理错误，避免在新聊天室时显示错误
     }
   };
 
@@ -184,22 +190,8 @@ export default function VisionChatInterface({
         quality: 0.8,
       });
       
-      // 上传压缩后的图片
-      const response = await fileApi.uploadChatImage(compressedFile, chatId);
-      
-      // 提取URL - 处理多种返回格式
-      let imageUrl: string | null = null;
-      const data: any = response.data;
-      
-      if (typeof data === 'string') {
-        imageUrl = data;
-      } else if (data && typeof data === 'object') {
-        if (data.data) {
-          imageUrl = data.data;
-        } else if (data.url) {
-          imageUrl = data.url;
-        }
-      }
+      // 上传压缩后的图片，fileApi.uploadChatImage 直接返回 URL 字符串
+      const imageUrl = await fileApi.uploadChatImage(compressedFile, chatId);
       
       return imageUrl;
     } catch (error: any) {
@@ -239,6 +231,7 @@ export default function VisionChatInterface({
     setInputValue('');
     setIsLoading(true);
     setStreamingResponse('');
+    isSendingMessageRef.current = true; // 标记开始发送消息
 
     // 获取用户ID
     const userId = loginUser?.id || 
@@ -336,13 +329,17 @@ export default function VisionChatInterface({
       setMessages(prev => [...prev, aiMessage]);
       setStreamingResponse('');
       onNewMessage?.(aiMessage);
-      
-      // 重新加载聊天记录以确保数据同步
-      loadChatHistory();
+
+      // 延迟重新加载历史记录，确保后端已保存完成
+      setTimeout(() => {
+        isSendingMessageRef.current = false; // 标记发送完成
+        loadChatHistory(); // 重新加载以同步后端数据
+      }, 1000); // 延迟1秒，给后端足够时间保存
 
     } catch (error) {
       console.error('发送消息失败:', error);
       setStreamingResponse('');
+      isSendingMessageRef.current = false; // 发送失败也要重置标志
     } finally {
       setIsLoading(false);
     }

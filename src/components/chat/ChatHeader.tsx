@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useMemo } from 'react'
-import { Space, Typography, Button, Dropdown } from 'antd'
+import { Space, Typography, Button, Dropdown, App } from 'antd'
 import { CommentOutlined, DownloadOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { exportChat, type ExportFormat } from '@/lib/utils/exportHelper'
@@ -14,10 +14,12 @@ interface ChatHeaderProps {
 }
 
 export default function ChatHeader({ chatId, title = 'chat' }: ChatHeaderProps) {
+  const { message } = App.useApp()
+  
   // 使用useCallback优化导出函数
   const handleExport = useCallback((format: ExportFormat) => {
-    exportChat(chatId, format, title)
-  }, [chatId, title])
+    exportChat(chatId, format, title, message)
+  }, [chatId, title, message])
 
   // 使用useMemo缓存菜单项，避免不必要的重新渲染
   const exportMenuItems: MenuProps['items'] = useMemo(() => [

@@ -4,7 +4,7 @@
  */
 
 import { exportTextChat, exportVisionChat } from '@/lib/api/chatService/api/chatExportController'
-import { message } from 'antd'
+import type { MessageInstance } from 'antd/es/message/interface'
 
 export type ExportFormat = 'markdown' | 'html' | 'txt' | 'json' | 'pdf'
 
@@ -55,20 +55,21 @@ const generateFilename = (title: string, format: ExportFormat): string => {
 export const exportChat = async (
   chatId: string,
   format: ExportFormat = 'markdown',
-  title: string = 'chat'
+  title: string = 'chat',
+  messageApi: MessageInstance
 ): Promise<void> => {
   if (!chatId) {
-    message.warning('请先选择一个对话')
+    messageApi.warning('请先选择一个对话')
     return
   }
 
   try {
-    message.loading({ content: `正在导出为 ${format.toUpperCase()} 格式...`, key: 'export' })
+    messageApi.loading({ content: `正在导出为 ${format.toUpperCase()} 格式...`, key: 'export' })
 
     const isVision = chatId.startsWith('vision_')
     const response = isVision
-      ? await exportVisionChat({ chatId, format })
-      : await exportTextChat({ chatId, format })
+      ? await exportVisionChat({ chatId, format }, { responseType: 'blob' })
+      : await exportTextChat({ chatId, format }, { responseType: 'blob' })
 
     // response.data 是 Blob 对象
     const blob = new Blob([response.data], {
@@ -78,10 +79,10 @@ export const exportChat = async (
     const filename = generateFilename(title, format)
     downloadBlob(blob, filename)
 
-    message.success({ content: '导出成功！', key: 'export' })
+    messageApi.success({ content: '导出成功！', key: 'export' })
   } catch (error) {
     console.error('导出失败', error)
-    message.error({ content: '导出失败，请稍后重试', key: 'export' })
+    messageApi.error({ content: '导出失败，请稍后重试', key: 'export' })
   }
 }
 
@@ -90,8 +91,9 @@ export const exportChat = async (
  */
 export const exportMultipleChats = async (
   chatIds: string[],
-  format: ExportFormat = 'markdown'
+  format: ExportFormat = 'markdown',
+  messageApi: MessageInstance
 ): Promise<void> => {
-  message.info('批量导出功能开发中...')
+  messageApi.info('批量导出功能开发中...')
   // TODO: 实现批量导出
 }

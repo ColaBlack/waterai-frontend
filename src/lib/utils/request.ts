@@ -5,8 +5,8 @@
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
 
-/** API 基础路径 */
-export const BASE_URL = 'http://localhost:8115/api'
+/** API 基础路径 - 使用相对路径，通过 Next.js rewrite 代理到后端 */
+export const BASE_URL = '/api'
 
 /** SSE 基础路径，直接使用 API 基础路径（通过 rewrite 代理到后端） */
 export const SSE_BASE_URL = process.env.NEXT_PUBLIC_SSE_BASE_URL || BASE_URL
@@ -23,7 +23,6 @@ const REQUEST_TIMEOUT = 60000
 const request: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: REQUEST_TIMEOUT,
-  // 不再需要 withCredentials，JWT通过Authorization header传递
 })
 
 /**
@@ -41,8 +40,6 @@ request.interceptors.request.use(
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`
       }
-      
-      // X-User-Id由网关从JWT token中提取并添加，前端不需要手动添加
     }
     
     return config

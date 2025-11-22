@@ -2,8 +2,10 @@
 
 import React from 'react'
 import { message } from 'antd'
+import { motion } from 'framer-motion'
 import { ChatMessage } from '@/lib/types/chat'
 import { parseMessageContent } from '@/lib/utils/messageParser'
+import { messageItem } from '@/lib/animations/variants'
 import AvatarBadge from './message/AvatarBadge'
 import MessageContent from './message/MessageContent'
 import MessageActions from './message/MessageActions'
@@ -31,8 +33,12 @@ export default function MessageItem({ message: chatMessage, renderKey }: Message
   return (
     <>
       {contextHolder}
-      <div
+      <motion.div
         data-renderkey={renderKey}
+        variants={messageItem}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
         style={{
           display: 'flex',
           justifyContent: isUser ? 'flex-end' : 'flex-start',
@@ -64,7 +70,7 @@ export default function MessageItem({ message: chatMessage, renderKey }: Message
             />
           </div>
         </div>
-      </div>
+      </motion.div>
     </>
   )
 }

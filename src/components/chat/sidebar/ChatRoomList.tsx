@@ -3,7 +3,9 @@
 import React from 'react'
 import { List, Spin, Empty, Typography, Button, App } from 'antd'
 import { MessageOutlined, DeleteOutlined } from '@ant-design/icons'
+import { motion, AnimatePresence } from 'framer-motion'
 import { formatTimestamp } from '@/lib/utils/messageParser'
+import { sidebarItem, staggerContainer } from '@/lib/animations/variants'
 import request from '@/lib/utils/request'
 
 const { Text } = Typography
@@ -77,23 +79,38 @@ export default function ChatRoomList({
   }
 
   return (
-    <List
-      dataSource={chatRoomList}
-      renderItem={(item) => (
-        <List.Item
-          onClick={() => item.chatroom && onSwitch(item.chatroom)}
-          style={{
-            padding: '12px',
-            cursor: 'pointer',
-            borderRadius: '8px',
-            marginBottom: '4px',
-            backgroundColor: item.chatroom === currentChatId ? '#e6f7ff' : 'transparent',
-            border: item.chatroom === currentChatId ? '1px solid #91d5ff' : '1px solid transparent',
-            transition: 'all 0.3s',
-            position: 'relative',
-          }}
-          className="chat-room-item"
-        >
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
+      <AnimatePresence>
+        <List
+          dataSource={chatRoomList}
+          renderItem={(item, index) => (
+            <motion.div
+              key={item.chatroom}
+              custom={index}
+              variants={sidebarItem}
+              initial="hidden"
+              animate="visible"
+              whileHover="hover"
+              layout
+            >
+              <List.Item
+                onClick={() => item.chatroom && onSwitch(item.chatroom)}
+                style={{
+                  padding: '12px',
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  marginBottom: '4px',
+                  backgroundColor: item.chatroom === currentChatId ? '#e6f7ff' : 'transparent',
+                  border: item.chatroom === currentChatId ? '1px solid #91d5ff' : '1px solid transparent',
+                  transition: 'all 0.3s',
+                  position: 'relative',
+                }}
+                className="chat-room-item"
+              >
           <List.Item.Meta
             avatar={<MessageOutlined style={{ fontSize: '18px', color: '#667eea' }} />}
             title={
@@ -118,8 +135,11 @@ export default function ChatRoomList({
             }
           />
         </List.Item>
-      )}
-    />
+            </motion.div>
+          )}
+        />
+      </AnimatePresence>
+    </motion.div>
   )
 }
 

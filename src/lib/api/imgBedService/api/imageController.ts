@@ -26,9 +26,6 @@ export async function uploadFile(
 ) {
   return request<API.BaseResponseString>("/image/upload", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     params: {
       ...params,
     },
@@ -46,9 +43,6 @@ export async function uploadAvatar(
 ) {
   return request<API.BaseResponseString>("/image/upload/avatar", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     params: {
       ...params,
     },
@@ -66,9 +60,6 @@ export async function uploadChatImage(
 ) {
   return request<API.BaseResponseString>("/image/upload/chat-image", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     params: {
       ...params,
     },

@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useState, useCallback, useMemo } from 'react'
-import { Modal, Input, Select, List, Tag, Button, Space, Empty, Spin, message } from 'antd'
+import { Modal, Input, Select, List, Tag, Button, Space, Empty, Spin, App } from 'antd'
 import { SearchOutlined, ClockCircleOutlined, MessageOutlined } from '@ant-design/icons'
 import { searchChats } from '@/lib/api/chatService/api/chatSearchController'
 import { useRouter } from 'next/navigation'
 
-const { Search } = Input
+// 不再需要 Search 组件
 
 interface ChatSearchDialogProps {
   open: boolean
@@ -17,6 +17,7 @@ const PAGE_SIZE = 10
 
 export default function ChatSearchDialog({ open, onClose }: ChatSearchDialogProps) {
   const router = useRouter()
+  const { message } = App.useApp()
   const [keyword, setKeyword] = useState('')
   const [chatType, setChatType] = useState<'text' | 'vision' | 'all'>('all')
   const [results, setResults] = useState<API.ChatSearchResult[]>([])
@@ -43,7 +44,7 @@ export default function ChatSearchDialog({ open, onClose }: ChatSearchDialogProp
       })
 
       const res = response.data
-      if (res.code === 0 && res.data) {
+      if (res.code === 200 && res.data) {
         setResults(res.data.records || [])
         setTotal(res.data.total || 0)
       } else {
@@ -86,7 +87,6 @@ export default function ChatSearchDialog({ open, onClose }: ChatSearchDialogProp
       onCancel={onClose}
       footer={null}
       width={700}
-      destroyOnClose
     >
       {/* 搜索栏 */}
       <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
@@ -99,15 +99,21 @@ export default function ChatSearchDialog({ open, onClose }: ChatSearchDialogProp
           <Select.Option value="text">文本对话</Select.Option>
           <Select.Option value="vision">视觉对话</Select.Option>
         </Select>
-        <Search
+        <Input
           placeholder="输入关键词搜索对话内容..."
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          onSearch={() => handleSearch(1)}
-          enterButton={<SearchOutlined />}
-          loading={loading}
+          onPressEnter={() => handleSearch(1)}
           allowClear
         />
+        <Button 
+          type="primary" 
+          icon={<SearchOutlined />}
+          onClick={() => handleSearch(1)}
+          loading={loading}
+        >
+          搜索
+        </Button>
       </Space.Compact>
 
       {/* 操作按钮 */}
@@ -127,9 +133,9 @@ export default function ChatSearchDialog({ open, onClose }: ChatSearchDialogProp
       {/* 搜索结果列表 */}
       <div style={{ maxHeight: 500, overflowY: 'auto' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Spin tip="搜索中..." />
-          </div>
+          <Spin tip="搜索中..." spinning={true}>
+            <div style={{ textAlign: 'center', padding: '40px 0', minHeight: '100px' }} />
+          </Spin>
         ) : results.length === 0 ? (
           <Empty
             description={keyword ? '未找到相关对话' : '请输入关键词开始搜索'}

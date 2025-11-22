@@ -61,6 +61,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListString = {
+    code?: number;
+    data?: string[];
+    message?: string;
+  };
+
   type BaseResponseListVisionChatRecordVO = {
     code?: number;
     data?: VisionChatRecordVO[];
@@ -76,6 +82,12 @@ declare namespace API {
   type BaseResponseLong = {
     code?: number;
     data?: number;
+    message?: string;
+  };
+
+  type BaseResponsePageChatSearchResult = {
+    code?: number;
+    data?: PageChatSearchResult;
     message?: string;
   };
 
@@ -122,6 +134,36 @@ declare namespace API {
     createTime?: string;
   };
 
+  type ChatSearchRequest = {
+    /** 搜索关键词 */
+    keyword?: string;
+    /** 对话类型 */
+    chatType?: "text" | "vision" | "all";
+    /** 开始时间 */
+    startTime?: string;
+    /** 结束时间 */
+    endTime?: string;
+    /** 当前页 */
+    current?: number;
+    /** 每页大小 */
+    pageSize?: number;
+  };
+
+  type ChatSearchResult = {
+    /** 对话ID */
+    chatId?: string;
+    /** 对话标题 */
+    title?: string;
+    /** 对话类型 */
+    chatType?: string;
+    /** 消息数量 */
+    messageCount?: number;
+    /** 最后消息时间 */
+    lastMessageTime?: string;
+    /** 内容片段 */
+    snippet?: string;
+  };
+
   type createChatRoomParams = {
     /** 聊天室标题 */
     title?: string;
@@ -147,6 +189,20 @@ declare namespace API {
   type deleteDocumentParams = {
     /** 文档ID */
     id: number;
+  };
+
+  type exportTextChatParams = {
+    /** 对话ID */
+    chatId: string;
+    /** 导出格式 */
+    format?: string;
+  };
+
+  type exportVisionChatParams = {
+    /** 对话ID */
+    chatId: string;
+    /** 导出格式 */
+    format?: string;
   };
 
   type getChatRecordsParams = {
@@ -206,6 +262,20 @@ declare namespace API {
     asc?: boolean;
   };
 
+  type PageChatSearchResult = {
+    records?: ChatSearchResult[];
+    total?: number;
+    size?: number;
+    current?: number;
+    orders?: OrderItem[];
+    optimizeCountSql?: PageChatSearchResult;
+    searchCount?: PageChatSearchResult;
+    optimizeJoinOfCountSql?: boolean;
+    maxLimit?: number;
+    countId?: string;
+    pages?: number;
+  };
+
   type PageVisionChatRecordVO = {
     records?: VisionChatRecordVO[];
     total?: number;
@@ -220,6 +290,13 @@ declare namespace API {
     pages?: number;
   };
 
+  type searchMessagesParams = {
+    /** 对话ID */
+    chatId: string;
+    /** 搜索关键词 */
+    keyword: string;
+  };
+
   type SseEmitter = {
     timeout?: number;
   };
@@ -229,22 +306,18 @@ declare namespace API {
     totalUsers?: number;
     /** 今日新增用户数 */
     todayNewUsers?: number;
-    /** 总对话数 */
-    totalChats?: number;
-    /** 今日对话数 */
-    todayChats?: number;
+    /** 总文本对话室数 */
+    totalChatRooms?: number;
+    /** 总视觉对话室数 */
+    totalVisionChatRooms?: number;
     /** 总知识库文档数 */
-    totalKnowledgeDocs?: number;
-    /** 已处理文档数 */
-    processedDocs?: number;
-    /** 待处理文档数 */
-    pendingDocs?: number;
-    /** 总向量数 */
-    totalVectors?: number;
-    /** 文本对话室数量 */
-    textChatRooms?: number;
-    /** 视觉对话室数量 */
-    visionChatRooms?: number;
+    totalKnowledgeBase?: number;
+    /** 今日新增文本对话室数 */
+    todayNewChatRooms?: number;
+    /** 今日新增视觉对话室数 */
+    todayNewVisionChatRooms?: number;
+    /** 今日新增知识库文档数 */
+    todayNewKnowledgeBase?: number;
   };
 
   type updateChatRoomTitleParams = {
@@ -277,81 +350,5 @@ declare namespace API {
     title?: string;
     createTime?: string;
     updateTime?: string;
-  };
-
-  // ====== Chat Search & Export Types ======
-
-  /** 对话搜索请求 */
-  type ChatSearchRequest = {
-    /** 搜索关键词 */
-    keyword?: string;
-    /** 对话类型 */
-    chatType?: 'text' | 'vision' | 'all';
-    /** 开始时间 */
-    startTime?: string;
-    /** 结束时间 */
-    endTime?: string;
-    /** 当前页 */
-    current?: number;
-    /** 每页大小 */
-    pageSize?: number;
-  };
-
-  /** 对话搜索结果 */
-  type ChatSearchResult = {
-    /** 对话ID */
-    chatId?: string;
-    /** 对话标题 */
-    title?: string;
-    /** 对话类型 */
-    chatType?: string;
-    /** 消息数量 */
-    messageCount?: number;
-    /** 最后消息时间 */
-    lastMessageTime?: string;
-    /** 内容片段 */
-    snippet?: string;
-  };
-
-  /** 分页对话搜索结果 */
-  type PageChatSearchResult = {
-    records?: ChatSearchResult[];
-    total?: number;
-    size?: number;
-    current?: number;
-    pages?: number;
-  };
-
-  type BaseResponsePageChatSearchResult = {
-    code?: number;
-    data?: PageChatSearchResult;
-    message?: string;
-  };
-
-  type BaseResponseListString = {
-    code?: number;
-    data?: string[];
-    message?: string;
-  };
-
-  type searchMessagesInChatParams = {
-    /** 对话ID */
-    chatId: string;
-    /** 搜索关键词 */
-    keyword: string;
-  };
-
-  type exportTextChatParams = {
-    /** 对话ID */
-    chatId: string;
-    /** 导出格式 */
-    format?: 'markdown' | 'html' | 'txt' | 'json' | 'pdf';
-  };
-
-  type exportVisionChatParams = {
-    /** 对话ID */
-    chatId: string;
-    /** 导出格式 */
-    format?: 'markdown' | 'html' | 'txt' | 'json' | 'pdf';
   };
 }

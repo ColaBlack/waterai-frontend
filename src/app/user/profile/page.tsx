@@ -79,21 +79,8 @@ export default function UserProfilePage() {
         return
       }
 
-      // 检查图片尺寸，如果较大则显示裁剪界面
-      const img = new Image()
-      img.onload = () => {
-        if (img.width > 800 || img.height > 800) {
-          setSelectedAvatarFile(file)
-          setCropperVisible(true)
-        } else {
-          // 直接上传
-          handleAvatarUpload(file)
-        }
-      }
-      img.onerror = () => {
-        message.error('图片加载失败')
-      }
-      img.src = URL.createObjectURL(file)
+      setSelectedAvatarFile(file)
+      setCropperVisible(true)
     })
   }
 
@@ -111,39 +98,20 @@ export default function UserProfilePage() {
       })
 
       // 上传压缩后的头像
-      const uploadRes = await fileApi.uploadAvatar(compressedFile, loginUser.id)
+      // fileApi.uploadAvatar 已经处理了响应并直接返回 URL 字符串
+      const avatarUrl = await fileApi.uploadAvatar(compressedFile, loginUser.id)
       
-      // 后端返回格式: { code: 200, data: "url", message: "..." }
-      // axios 响应格式: response.data = { code: 200, data: "url", message: "..." }
-      let avatarUrl: string | undefined
+      // 更新用户资料中的头像
+      const updateRes = await updateMyProfile({
+        userAvatar: avatarUrl,
+      })
       
-      if (uploadRes.data) {
-        // 检查是否是 BaseResponse 格式
-        if (uploadRes.data.data !== undefined) {
-          avatarUrl = uploadRes.data.data
-        } else if (typeof uploadRes.data === 'string') {
-          // 如果直接返回字符串
-          avatarUrl = uploadRes.data
-        }
-      }
-      
-      if (avatarUrl && typeof avatarUrl === 'string') {
-        // 更新用户资料中的头像
-        const updateRes = await updateMyProfile({
-          userAvatar: avatarUrl,
-        })
-        
-        if (updateRes.data.code === 200) {
-          message.success('头像上传成功')
-          // 刷新用户信息
-          await fetchLoginUser()
-        } else {
-          message.error('头像更新失败：' + (updateRes.data.message || '未知错误'))
-        }
+      if (updateRes.data.code === 200) {
+        message.success('头像上传成功')
+        // 刷新用户信息
+        await fetchLoginUser()
       } else {
-        const errorMsg = '头像上传失败：返回数据格式错误'
-        console.error('头像上传响应格式错误:', uploadRes.data)
-        message.error(errorMsg)
+        message.error('头像更新失败：' + (updateRes.data.message || '未知错误'))
       }
     } catch (error: any) {
       console.error('头像上传失败:', error)

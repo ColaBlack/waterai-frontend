@@ -303,7 +303,12 @@ export function useChatMessages(
       
       if (historyStr) {
         const loadedMessages = JSON.parse(historyStr)
-        dispatch({ type: 'SET_MESSAGES', payload: loadedMessages })
+        // 确保所有历史消息的 isStreaming 都为 false
+        const messagesWithCorrectState = loadedMessages.map((msg: ChatMessage) => ({
+          ...msg,
+          isStreaming: false
+        }))
+        dispatch({ type: 'SET_MESSAGES', payload: messagesWithCorrectState })
         // messagesRef 会在 reducer 中自动更新
       } else {
         dispatch({ type: 'SET_MESSAGES', payload: [] })
@@ -357,6 +362,7 @@ export function useChatMessages(
             role: role as 'user' | 'ai',
             content: msg.content || '',
             timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now(),
+            // 历史消息永远不应该处于流式状态
             isStreaming: false
           }
         })
@@ -618,6 +624,14 @@ export function useChatMessages(
 
   // 清空消息列表
   const clearMessages = useCallback(() => {
+    // 先关闭SSE连接
+    if (sseClientRef.current) {
+      sseClientRef.current.close()
+      sseClientRef.current = null
+    }
+    // 重置所有状态
+    setIsConnecting(false)
+    setIsLoading(false)
     dispatch({ type: 'CLEAR_MESSAGES' })
     isSendingFirstMessageRef.current = false // 清除第一条消息标记
   }, [])

@@ -12,9 +12,13 @@ interface StreamingTextProps {
 export default function StreamingText({ content, isStreaming = false }: StreamingTextProps) {
   return (
     <div style={{ position: 'relative', display: 'block', width: '100%' }}>
-      <div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      >
         <MarkdownRenderer content={content} />
-      </div>
+      </motion.div>
 
       {isStreaming && content && (
         <motion.span

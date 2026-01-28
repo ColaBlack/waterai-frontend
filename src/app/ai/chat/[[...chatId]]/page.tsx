@@ -70,9 +70,15 @@ export default function ChatPage() {
   useEffect(() => {
     // 刷新用户信息，确保 session 有效
     fetchLoginUser()
+  }, [fetchLoginUser])
+
+  useEffect(() => {
     initChatRoom(chatIdFromParams)
+  }, [chatIdFromParams, initChatRoom])
+
+  useEffect(() => {
     loadChatRoomList()
-  }, [chatIdFromParams, initChatRoom, loadChatRoomList, fetchLoginUser])
+  }, [loadChatRoomList])
 
   // 加载历史消息
   useEffect(() => {

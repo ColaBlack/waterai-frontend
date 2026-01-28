@@ -240,7 +240,7 @@ const StatisticsPage: React.FC = () => {
       </Row>
 
       <div style={{ marginTop: 16, textAlign: "center", color: "#999" }}>
-        <p>📊 数据每分钟自动刷新 | 最后更新: {new Date().toLocaleString("zh-CN")}</p>
+        <p>📊 数据最后更新: {new Date().toLocaleString("zh-CN")}</p>
       </div>
     </div>
     </GlobalLayout>

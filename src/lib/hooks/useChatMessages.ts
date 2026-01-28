@@ -239,10 +239,10 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
             timestamp: contentChanged ? Date.now() : currentMessage.timestamp
           }
           
-          
+          // 只有在内容变化时才增加 renderCounter
           newState = {
             messages: newMessages,
-            renderCounter: state.renderCounter + 1
+            renderCounter: contentChanged ? state.renderCounter + 1 : state.renderCounter
           }
           messagesRef.current = newMessages
           return newState

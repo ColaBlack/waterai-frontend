@@ -4,7 +4,7 @@
 
 /** 文本模型列表 */
 export const TEXT_MODELS = [
-  { label: 'GLM-Z1-Flash（深度推理）', value: 'glm-z1-flash' },
+  { label: 'GLM-Z1-Flash（深度推理，不支持MCP）', value: 'glm-z1-flash' },
   { label: 'GLM-4.5-Flash（标准）', value: 'glm-4.5-flash' },
   { label: 'GLM-4-Flash（普通）', value: 'glm-4-flash' },
 ] as const

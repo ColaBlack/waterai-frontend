@@ -62,8 +62,13 @@ export default function ChatSearchDialog({ open, onClose }: ChatSearchDialogProp
     }
   }, [keyword, chatType])
 
-  const handleSelectChat = useCallback((chatId: string) => {
-    router.push(`/ai/chat/${chatId}`)
+  const handleSelectChat = useCallback((chatId: string, chatType?: string) => {
+    // 根据聊天类型跳转到不同的页面
+    if (chatType === 'vision') {
+      router.push(`/ai/vision?chatId=${chatId}`)
+    } else {
+      router.push(`/ai/chat/${chatId}`)
+    }
     onClose()
   }, [router, onClose])
 
@@ -160,7 +165,7 @@ export default function ChatSearchDialog({ open, onClose }: ChatSearchDialogProp
             renderItem={(item) => (
               <List.Item
                 key={item.chatId}
-                onClick={() => handleSelectChat(item.chatId!)}
+                onClick={() => handleSelectChat(item.chatId!, item.chatType)}
                 style={{
                   cursor: 'pointer',
                   transition: 'background 0.2s',

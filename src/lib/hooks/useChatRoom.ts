@@ -54,7 +54,8 @@ export function useChatRoom(messageApi?: any) {
 
   // 加载历史聊天室列表
   const loadChatRoomList = useCallback(async (): Promise<void> => {
-    if (!loginUser.id) {
+    const userId = loginUser.id
+    if (!userId) {
       // 如果用户未登录，不加载聊天室列表
       return
     }
@@ -62,7 +63,7 @@ export function useChatRoom(messageApi?: any) {
     setLoadingHistory(true)
     
     try {
-      const response = await listChatRooms({ userId: loginUser.id })
+      const response = await listChatRooms({ userId })
 
       if (response.status === API_CONSTANTS.SUCCESS_STATUS) {
         const data = response.data.data || response.data
@@ -80,11 +81,12 @@ export function useChatRoom(messageApi?: any) {
     } finally {
       setLoadingHistory(false)
     }
-  }, [loginUser.id])
+  }, [loginUser.id, messageApi])
 
   // 创建聊天室记录（在后端）
   const createChatRoom = useCallback(async (userPrompt: string): Promise<string | null> => {
-    if (!loginUser.id) {
+    const userId = loginUser.id
+    if (!userId) {
       // 如果用户未登录，无法创建聊天室
       messageApi?.warning('用户未登录，无法创建聊天室')
       return null
@@ -93,7 +95,7 @@ export function useChatRoom(messageApi?: any) {
     try {
       const response = await apiCreateChatRoom({ 
         userPrompt,
-        userId: loginUser.id 
+        userId 
       })
 
       if (response.status === API_CONSTANTS.SUCCESS_STATUS) {
@@ -123,7 +125,7 @@ export function useChatRoom(messageApi?: any) {
       messageApi?.warning('聊天室创建失败，但可以继续对话')
       return null
     }
-  }, [chatId, loginUser.id, loadChatRoomList, router])
+  }, [chatId, loginUser.id, loadChatRoomList, messageApi])
 
   // 安全更新 chatId（用于在 SSE 连接完成后更新）
   const updateChatId = useCallback((newChatId: string) => {

@@ -75,6 +75,9 @@ export default function VisionChatPage() {
     lastMessageTime: room.updateTime || room.createTime,
   }))
 
+  // 获取当前聊天室的标题
+  const currentChatTitle = chatRoomList.find(room => room.chatroom === chatId)?.title || '视觉对话'
+
   const handleCreateNewChat = () => {
     createNewChat()
   }
@@ -151,7 +154,7 @@ export default function VisionChatPage() {
           >
             {/* 头部 */}
             <div style={{ padding: '16px 24px' }}>
-              <VisionChatHeader chatId={chatId} />
+              <VisionChatHeader chatId={chatId} title={currentChatTitle} />
             </div>
 
             <Divider style={{ margin: 0 }} />

@@ -7,6 +7,10 @@ import type { ColumnsType } from 'antd/es/table'
 import GlobalLayout from '@/components/GlobalLayout'
 import request from '@/lib/utils/request'
 import { CopyButton } from '@/components/chat/CopyButton'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
+import rehypeRaw from 'rehype-raw'
 
 interface ChatRoom {
   chatroom: string
@@ -77,8 +81,8 @@ export default function AdminChatManagePage() {
   const handleViewMessages = async (chatroomId: string, isVision: boolean) => {
     try {
       const url = isVision 
-        ? `/vision-chat/records/${chatroomId}`
-        : `/ai/chat-room/${chatroomId}/messages`
+        ? `/vision-chat/admin/records/${chatroomId}`
+        : `/ai/chat-room/admin/${chatroomId}/messages`
       
       const response = await request.get(url)
       if (response.data?.code === 200) {
@@ -324,10 +328,16 @@ export default function AdminChatManagePage() {
                         while ((match = thinkRegex.exec(msg.content)) !== null) {
                           // 添加 <think> 之前的文本
                           if (match.index > lastIndex) {
+                            const textContent = msg.content.substring(lastIndex, match.index);
                             parts.push(
-                              <span key={`text-${lastIndex}`}>
-                                {msg.content.substring(lastIndex, match.index)}
-                              </span>
+                              <div key={`text-${lastIndex}`} className="markdown-content">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm, remarkBreaks]}
+                                  rehypePlugins={[rehypeRaw]}
+                                >
+                                  {textContent}
+                                </ReactMarkdown>
+                              </div>
                             );
                           }
 
@@ -375,15 +385,30 @@ export default function AdminChatManagePage() {
 
                         // 添加最后的文本
                         if (lastIndex < msg.content.length) {
+                          const textContent = msg.content.substring(lastIndex);
                           parts.push(
-                            <span key={`text-${lastIndex}`}>
-                              {msg.content.substring(lastIndex)}
-                            </span>
+                            <div key={`text-${lastIndex}`} className="markdown-content">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm, remarkBreaks]}
+                                rehypePlugins={[rehypeRaw]}
+                              >
+                                {textContent}
+                              </ReactMarkdown>
+                            </div>
                           );
                         }
 
                         return parts;
                       })()}
+                    </div>
+                  ) : isAssistantMessage ? (
+                    <div className="markdown-content">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm, remarkBreaks]}
+                        rehypePlugins={[rehypeRaw]}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     <div>{msg.content}</div>
@@ -433,3 +458,46 @@ export default function AdminChatManagePage() {
     </GlobalLayout>
   )
 }
+
+
+      <style jsx global>{`
+        .markdown-content {
+          line-height: 1.6;
+        }
+        .markdown-content p {
+          margin: 0.5em 0;
+        }
+        .markdown-content code {
+          background-color: rgba(0, 0, 0, 0.05);
+          padding: 2px 6px;
+          border-radius: 3px;
+          font-family: 'Courier New', monospace;
+        }
+        .markdown-content pre {
+          background-color: rgba(0, 0, 0, 0.05);
+          padding: 12px;
+          border-radius: 6px;
+          overflow-x: auto;
+        }
+        .markdown-content pre code {
+          background-color: transparent;
+          padding: 0;
+        }
+        .markdown-content ul, .markdown-content ol {
+          margin: 0.5em 0;
+          padding-left: 2em;
+        }
+        .markdown-content table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 0.5em 0;
+        }
+        .markdown-content th, .markdown-content td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+        }
+        .markdown-content th {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+      `}</style>

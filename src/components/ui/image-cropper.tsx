@@ -117,10 +117,6 @@ export function ImageCropper({
     
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     
-    // 绘制半透明背景
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    
     // 保存上下文
     ctx.save()
     
@@ -151,13 +147,29 @@ export function ImageCropper({
     // 恢复上下文
     ctx.restore()
     
+    // 绘制半透明遮罩（裁剪区域外）
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    
+    // 清除裁剪区域的遮罩
+    ctx.globalCompositeOperation = 'destination-out'
+    if (cropShape === 'circle') {
+      const centerX = cropArea.x + cropArea.width / 2
+      const centerY = cropArea.y + cropArea.height / 2
+      const radius = Math.min(cropArea.width, cropArea.height) / 2
+      ctx.beginPath()
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+      ctx.fill()
+    } else {
+      ctx.fillRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
+    }
+    ctx.globalCompositeOperation = 'source-over'
+    
     // 绘制裁剪框
     ctx.strokeStyle = '#1890ff'
     ctx.lineWidth = 2
     ctx.setLineDash([])
-    ctx.strokeRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
     
-    // 绘制裁剪框
     if (cropShape === 'circle') {
       // 圆形裁剪框
       const centerX = cropArea.x + cropArea.width / 2
@@ -166,8 +178,6 @@ export function ImageCropper({
       
       ctx.beginPath()
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
-      ctx.strokeStyle = '#1890ff'
-      ctx.lineWidth = 2
       ctx.stroke()
       
       // 绘制圆形裁剪框的控制点
@@ -186,6 +196,8 @@ export function ImageCropper({
       })
     } else {
       // 矩形裁剪框
+      ctx.strokeRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
+      
       // 绘制裁剪框的四个角
       const cornerSize = 20
       ctx.fillStyle = '#1890ff'
@@ -256,20 +268,6 @@ export function ImageCropper({
         ctx.setLineDash([])
       }
     }
-    
-    // 清除裁剪区域外的内容
-    ctx.globalCompositeOperation = 'destination-in'
-    ctx.fillStyle = '#000'
-    if (cropShape === 'circle') {
-      const centerX = cropArea.x + cropArea.width / 2
-      const centerY = cropArea.y + cropArea.height / 2
-      const radius = Math.min(cropArea.width, cropArea.height) / 2
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
-      ctx.fill()
-    } else {
-      ctx.fillRect(cropArea.x, cropArea.y, cropArea.width, cropArea.height)
-    }
   }, [imageSrc, scale, rotation, position, cropArea, imageData, cropShape, showGrid, showGuides])
 
   // 处理鼠标拖拽
@@ -319,16 +317,31 @@ export function ImageCropper({
   const handleCrop = () => {
     if (!imageData.img || !imageFile) return
     
-    // 创建新的canvas用于裁剪
-    const cropCanvas = document.createElement('canvas')
-    const cropCtx = cropCanvas.getContext('2d')
-    if (!cropCtx) return
+    // 创建一个临时canvas，只绘制图片（不包含遮罩和参考线）
+    const tempCanvas = document.createElement('canvas')
+    const tempCtx = tempCanvas.getContext('2d')
+    if (!tempCtx) return
     
-    // 计算裁剪区域在原图中的位置
-    // 首先需要计算图片在canvas中的显示尺寸
+    tempCanvas.width = CANVAS_WIDTH
+    tempCanvas.height = CANVAS_HEIGHT
+    
+    // 保存上下文
+    tempCtx.save()
+    
+    // 移动到画布中心
+    tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2)
+    
+    // 应用旋转
+    tempCtx.rotate((rotation * Math.PI) / 180)
+    
+    // 应用缩放和位置
+    tempCtx.scale(scale, scale)
+    tempCtx.translate(position.x, position.y)
+    
+    // 计算图片显示尺寸（保持宽高比）
     const imgAspect = imageData.width / imageData.height
-    let displayWidth = CANVAS_HEIGHT * 1.5
-    let displayHeight = CANVAS_HEIGHT * 1.5
+    let displayWidth = tempCanvas.height * 1.5
+    let displayHeight = tempCanvas.height * 1.5
     
     if (imgAspect > 1) {
       displayHeight = displayWidth / imgAspect
@@ -336,69 +349,58 @@ export function ImageCropper({
       displayWidth = displayHeight * imgAspect
     }
     
-    // 计算裁剪区域相对于图片中心的位置
-    const cropCenterX = cropArea.x + cropArea.width / 2 - CANVAS_WIDTH / 2
-    const cropCenterY = cropArea.y + cropArea.height / 2 - CANVAS_HEIGHT / 2
+    // 绘制图片（不包含任何UI元素）
+    tempCtx.drawImage(imageData.img, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight)
     
-    // 应用旋转和缩放变换
-    const cos = Math.cos((rotation * Math.PI) / 180)
-    const sin = Math.sin((rotation * Math.PI) / 180)
+    // 恢复上下文
+    tempCtx.restore()
     
-    // 反向变换到原图坐标系
-    const rotatedX = (cropCenterX - position.x) * cos + (cropCenterY - position.y) * sin
-    const rotatedY = -(cropCenterX - position.x) * sin + (cropCenterY - position.y) * cos
+    // 创建裁剪canvas
+    const cropCanvas = document.createElement('canvas')
+    const cropCtx = cropCanvas.getContext('2d')
+    if (!cropCtx) return
     
-    // 计算在原图中的裁剪区域
-    const scaleX = imageData.width / displayWidth / scale
-    const scaleY = imageData.height / displayHeight / scale
+    // 设置裁剪canvas的尺寸（限制最大尺寸）
+    let outputWidth = Math.min(cropArea.width, maxWidth)
+    let outputHeight = Math.min(cropArea.height, maxHeight)
     
-    const cropX = (imageData.width / 2) + rotatedX * scaleX - (cropArea.width * scaleX) / 2
-    const cropY = (imageData.height / 2) + rotatedY * scaleY - (cropArea.height * scaleY) / 2
-    const cropWidth = cropArea.width * scaleX
-    const cropHeight = cropArea.height * scaleY
-    
-    // 确保裁剪区域在图片范围内
-    const finalX = Math.max(0, Math.min(cropX, imageData.width))
-    const finalY = Math.max(0, Math.min(cropY, imageData.height))
-    const finalWidth = Math.min(cropWidth, imageData.width - finalX, maxWidth)
-    const finalHeight = Math.min(cropHeight, imageData.height - finalY, maxHeight)
-    
-    // 设置裁剪canvas尺寸
-    cropCanvas.width = finalWidth
-    cropCanvas.height = finalHeight
-    
-    // 如果图片有旋转，需要先旋转再裁剪
-    if (rotation !== 0) {
-      // 创建一个临时canvas来旋转图片
-      const tempCanvas = document.createElement('canvas')
-      const tempCtx = tempCanvas.getContext('2d')
-      if (!tempCtx) return
-      
-      // 计算旋转后的尺寸
-      const rad = (rotation * Math.PI) / 180
-      const rotatedWidth = Math.abs(imageData.width * Math.cos(rad)) + Math.abs(imageData.height * Math.sin(rad))
-      const rotatedHeight = Math.abs(imageData.width * Math.sin(rad)) + Math.abs(imageData.height * Math.cos(rad))
-      
-      tempCanvas.width = rotatedWidth
-      tempCanvas.height = rotatedHeight
-      
-      tempCtx.translate(rotatedWidth / 2, rotatedHeight / 2)
-      tempCtx.rotate(rad)
-      tempCtx.drawImage(imageData.img, -imageData.width / 2, -imageData.height / 2)
-      
-      // 从旋转后的图片中裁剪
-      cropCtx.drawImage(tempCanvas, finalX, finalY, finalWidth, finalHeight, 0, 0, finalWidth, finalHeight)
-    } else {
-      // 直接裁剪
-      cropCtx.drawImage(imageData.img, finalX, finalY, finalWidth, finalHeight, 0, 0, finalWidth, finalHeight)
+    // 如果需要保持宽高比
+    if (aspectRatio) {
+      if (outputWidth / outputHeight > aspectRatio) {
+        outputWidth = outputHeight * aspectRatio
+      } else {
+        outputHeight = outputWidth / aspectRatio
+      }
     }
+    
+    cropCanvas.width = outputWidth
+    cropCanvas.height = outputHeight
+    
+    // 如果是圆形裁剪，需要创建圆形遮罩
+    if (cropShape === 'circle') {
+      const centerX = outputWidth / 2
+      const centerY = outputHeight / 2
+      const radius = Math.min(outputWidth, outputHeight) / 2
+      
+      cropCtx.beginPath()
+      cropCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+      cropCtx.closePath()
+      cropCtx.clip()
+    }
+    
+    // 从临时canvas中裁剪出裁剪框区域
+    cropCtx.drawImage(
+      tempCanvas,
+      cropArea.x, cropArea.y, cropArea.width, cropArea.height,  // 源区域
+      0, 0, outputWidth, outputHeight  // 目标区域
+    )
     
     // 转换为Blob
     cropCanvas.toBlob((blob) => {
       if (blob) {
         const croppedFile = new File(
           [blob],
-          imageFile.name.replace(/\.[^/.]+$/, '') + '.jpg',
+          imageFile.name.replace(/\.[^/.]+$/, '') + '_cropped.jpg',
           {
             type: 'image/jpeg',
             lastModified: Date.now(),
@@ -406,7 +408,7 @@ export function ImageCropper({
         )
         onCrop(croppedFile)
       }
-    }, 'image/jpeg', 0.9)
+    }, 'image/jpeg', 0.92)
   }
 
   return (

@@ -51,9 +51,9 @@ export default function MessageList({
         <>
           {messages.map((msg, index) => (
             <MessageItem
-              key={`${renderCounter}-${index}-${msg.content.length}`}
+              key={`msg-${index}-${msg.timestamp}`}
               message={msg}
-              renderKey={`${renderCounter}-${msg.content.length}`}
+              renderKey={`${renderCounter}-${index}`}
             />
           ))}
           <div ref={messagesEndRef} />

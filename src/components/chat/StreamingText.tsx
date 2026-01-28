@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { motion } from 'framer-motion'
 import MarkdownRenderer from './markdown/MarkdownRenderer'
 
 interface StreamingTextProps {
@@ -12,16 +11,12 @@ interface StreamingTextProps {
 export default function StreamingText({ content, isStreaming = false }: StreamingTextProps) {
   return (
     <div style={{ position: 'relative', display: 'block', width: '100%' }}>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.2 }}
-      >
+      <div>
         <MarkdownRenderer content={content} />
-      </motion.div>
+      </div>
 
       {isStreaming && content && (
-        <motion.span
+        <span
           style={{
             display: 'inline-block',
             width: '2px',
@@ -29,17 +24,17 @@ export default function StreamingText({ content, isStreaming = false }: Streamin
             backgroundColor: '#52c41a',
             marginLeft: '2px',
             verticalAlign: 'text-bottom',
-          }}
-          animate={{
-            opacity: [1, 0, 1],
-          }}
-          transition={{
-            duration: 1,
-            repeat: Infinity,
-            ease: 'easeInOut',
+            animation: 'blink 1s ease-in-out infinite',
           }}
         />
       )}
+      
+      <style jsx>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
     </div>
   )
 }

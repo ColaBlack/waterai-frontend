@@ -1,11 +1,11 @@
 'use client'
 
-import React from 'react'
-import { Layout, List, Spin, Empty, Typography, Button, App } from 'antd'
-import { CameraOutlined, ReloadOutlined, LeftOutlined, DeleteOutlined } from '@ant-design/icons'
+import React, { useState } from 'react'
+import { Layout, List, Spin, Empty, Typography, Button, App, Space } from 'antd'
+import { CameraOutlined, ReloadOutlined, LeftOutlined, DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 import { formatTimestamp } from '@/lib/utils/messageParser'
-import SidebarHeader from '@/components/chat/sidebar/SidebarHeader'
 import SidebarFooter from '@/components/chat/sidebar/SidebarFooter'
+import ChatSearchDialog from '@/components/chat/ChatSearchDialog'
 
 const { Sider } = Layout
 const { Text } = Typography
@@ -33,6 +33,7 @@ export default function VisionChatSidebar({
 }: VisionChatSidebarProps) {
   const { message, modal } = App.useApp()
   const request = require('@/lib/utils/request').default
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false)
 
   // 删除聊天室
   const handleDelete = async (e: React.MouseEvent, chatId: string) => {
@@ -70,31 +71,47 @@ export default function VisionChatSidebar({
       }}
     >
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* 头部：新建和刷新按钮 */}
+        {/* 头部：新建、搜索和刷新按钮 */}
         <div
           style={{
             padding: '16px',
             borderBottom: '1px solid #e5e6eb',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
           }}
         >
+          {/* 新建对话按钮 */}
           <Button
             type="primary"
-            icon={<CameraOutlined />}
+            icon={<PlusOutlined />}
             onClick={onCreate}
             block
-            style={{ marginRight: '8px' }}
+            style={{ marginBottom: '8px' }}
           >
             新建视觉对话
           </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={onRefresh}
-            loading={loading}
-          />
+
+          {/* 搜索和刷新按钮 */}
+          <Space style={{ width: '100%' }}>
+            <Button
+              icon={<SearchOutlined />}
+              onClick={() => setSearchDialogOpen(true)}
+              block
+              style={{ flex: 1 }}
+            >
+              搜索对话
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={onRefresh}
+              loading={loading}
+            />
+          </Space>
         </div>
+
+        {/* 搜索对话框 */}
+        <ChatSearchDialog
+          open={searchDialogOpen}
+          onClose={() => setSearchDialogOpen(false)}
+        />
 
         {/* 聊天历史列表 */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>

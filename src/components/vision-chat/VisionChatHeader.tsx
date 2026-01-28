@@ -1,16 +1,50 @@
 'use client'
 
-import React from 'react'
-import { Space, Typography } from 'antd'
-import { CameraOutlined } from '@ant-design/icons'
+import React, { useCallback, useMemo } from 'react'
+import { Space, Typography, Button, Dropdown, App } from 'antd'
+import { CameraOutlined, DownloadOutlined } from '@ant-design/icons'
+import type { MenuProps } from 'antd'
+import { exportChat, type ExportFormat } from '@/lib/utils/exportHelper'
 
 const { Title } = Typography
 
 interface VisionChatHeaderProps {
   chatId: string
+  title?: string
 }
 
-export default function VisionChatHeader({ chatId }: VisionChatHeaderProps) {
+export default function VisionChatHeader({ chatId, title = 'vision_chat' }: VisionChatHeaderProps) {
+  const { message } = App.useApp()
+  
+  // 使用useCallback优化导出函数
+  const handleExport = useCallback((format: ExportFormat) => {
+    exportChat(chatId, format, title, message)
+  }, [chatId, title, message])
+
+  // 使用useMemo缓存菜单项，避免不必要的重新渲染
+  const exportMenuItems: MenuProps['items'] = useMemo(() => [
+    {
+      key: 'markdown',
+      label: 'Markdown',
+      onClick: () => handleExport('markdown'),
+    },
+    {
+      key: 'html',
+      label: 'HTML',
+      onClick: () => handleExport('html'),
+    },
+    {
+      key: 'txt',
+      label: '纯文本',
+      onClick: () => handleExport('txt'),
+    },
+    {
+      key: 'json',
+      label: 'JSON',
+      onClick: () => handleExport('json'),
+    },
+  ], [handleExport])
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <Space>
@@ -19,11 +53,21 @@ export default function VisionChatHeader({ chatId }: VisionChatHeaderProps) {
           视觉AI对话
         </Title>
       </Space>
-      {chatId && (
-        <span style={{ fontSize: '12px', color: '#999' }}>
-          会话ID: {chatId.substring(0, 20)}...
-        </span>
-      )}
+      
+      <Space>
+        {chatId && (
+          <>
+            <Dropdown menu={{ items: exportMenuItems }} placement="bottomRight">
+              <Button icon={<DownloadOutlined />} size="small">
+                导出对话
+              </Button>
+            </Dropdown>
+            <span style={{ fontSize: '12px', color: '#999' }}>
+              会话ID: {chatId.substring(0, 20)}...
+            </span>
+          </>
+        )}
+      </Space>
     </div>
   )
 }

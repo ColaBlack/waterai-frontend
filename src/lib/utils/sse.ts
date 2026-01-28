@@ -262,7 +262,8 @@ export class SSEClient {
    */
   private handlePlainText(text: string, options: SSEOptions) {
     // 直接将文本作为增量内容处理，保留所有字符（包括空白字符）
-    if (text !== undefined && text !== null) {
+    // 但跳过空字符串，避免触发不必要的更新
+    if (text !== undefined && text !== null && text.length > 0) {
       // 累积文本内容
       this.lastReceivedText += text
       
@@ -272,7 +273,6 @@ export class SSEClient {
         metadata: undefined,
         thinkingProcess: undefined
       })
-      
     }
   }
 
@@ -577,13 +577,15 @@ export class SSEClient {
     
     // 只有在有有效文本增量或元数据时才调用回调
     // 重要：如果displayText为空，即使有元数据，也要确保不会传递任何JSON字符串
-    if (displayText || hasMetadata || thinkingProcess) {
+    // 但是，如果只有元数据更新（如工具调用状态变化），也应该通知
+    const hasValidDisplayText = displayText && displayText.length > 0
+    
+    if (hasValidDisplayText || hasMetadata || thinkingProcess) {
       options.onMessage?.({
-        text: String(displayText), // 强制转换为字符串，确保绝对不是对象
+        text: hasValidDisplayText ? String(displayText) : '', // 强制转换为字符串，确保绝对不是对象
         thinkingProcess: thinkingProcess || undefined,
         metadata: hasMetadata ? metadata : undefined
       })
-      
     }
   }
 

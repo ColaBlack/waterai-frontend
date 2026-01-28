@@ -39,28 +39,28 @@ export default function HomePage() {
     {
       icon: <CommentOutlined style={{ fontSize: '48px', color: '#667eea' }} />,
       title: 'AI 智能问答',
-      description: '基于先进的 AI 模型，提供专业的水产品食品安全咨询服务',
+      description: '基于先进的大语言模型，提供专业的水产品食品安全咨询服务',
       action: () => router.push('/ai/chat'),
       needAuth: ROLE_ENUM.USER, // 需要用户权限
     },
     {
       icon: <SafetyOutlined style={{ fontSize: '48px', color: '#52c41a' }} />,
-      title: '安全监测',
-      description: '实时监测水产品质量，确保食品安全符合标准',
+      title: '监测数据',
+      description: '海量水产品检测数据，确保真实准确',
       action: () => router.push('/ai/chat'),
       needAuth: ROLE_ENUM.USER, // 需要用户权限
     },
     {
       icon: <TeamOutlined style={{ fontSize: '48px', color: '#ff7875' }} />,
-      title: '用户管理',
-      description: '管理员可以进行用户信息的增删改查操作',
+      title: '信息管理',
+      description: '管理员可以进行系统信息的增删改查操作',
       action: () => router.push('/admin/user'),
       needAuth: ROLE_ENUM.ADMIN, // 需要管理员权限
     },
     {
       icon: <RocketOutlined style={{ fontSize: '48px', color: '#ffa940' }} />,
       title: '快速入门',
-      description: '查看使用文档，快速上手平台功能',
+      description: '进行智能问答，快速上手平台功能',
       action: () => router.push('/ai/chat'),
       needAuth: ROLE_ENUM.PUBLIC, // 公开访问
     },
@@ -244,13 +244,12 @@ export default function HomePage() {
             {/* 平台介绍文字 */}
             <Paragraph style={{ fontSize: '16px', lineHeight: '1.8' }}>
               本平台是一个结合了人工智能技术的水产品食品安全监测智能问答系统。
-              通过先进的自然语言处理技术，为用户提供专业的食品安全咨询服务，
-              帮助企业和个人更好地了解和把握水产品质量安全标准。
+              为您提供专业的食品安全咨询服务，
+              帮助您更好地了解和把握水产品质量安全标准。
             </Paragraph>
             <Paragraph style={{ fontSize: '16px', lineHeight: '1.8' }}>
               平台支持多模型切换、联网搜索、RAG增强等功能，可以根据不同的场景和需求，
-              提供最适合的解决方案。同时，平台还提供了完善的用户管理系统，
-              方便管理员进行用户信息的管理和维护。
+              提供最适合的解决方案。
             </Paragraph>
               </Card>
             </motion.div>

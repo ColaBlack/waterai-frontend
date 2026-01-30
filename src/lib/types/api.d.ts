@@ -7,13 +7,9 @@ declare namespace API {
     /** 聊天室编号，如果不存在则自动创建 */
     chatRoomId?: string
     /** 文本模型名称 */
-    modelName?: 'glm-z1-flash' | 'glm-4.5-flash' | 'glm-4-flash'
-    /** 是否启用联网搜索 */
-    useWebSearch?: boolean
-    /** 是否使用监测数据 */
-    useToolCalling?: boolean
-    /** 是否启用RAG功能（向量数据库检索增强） */
-    useRAG?: boolean
+    modelName?: 'deepseek-v3.2' | 'kimi-k2-thinking' | 'qwen3-max-2026-01-23' | 'MiniMax-M2.1'
+    /** 是否启用深度思考模式 */
+    enableThinking?: boolean
   }
 
   type AIVisionQuestionRequest = {
@@ -25,8 +21,10 @@ declare namespace API {
     chatRoomId?: string
     /** 图像URL列表，支持1-10张图片。可以是HTTP/HTTPS URL或Base64编码（data:image/jpeg;base64,...） */
     imageUrls: string[]
-    /** 视觉模型类型 */
-    visionModelType?: 'vision' | 'vision_reasoning'
+    /** 视觉模型名称 */
+    visionModelName?: 'qwen3-vl-flash-2026-01-22' | 'qwen3-vl-plus-2025-12-19'
+    /** 是否启用深度思考模式 */
+    enableThinking?: boolean
   }
 
   type BaseResponseBoolean = {

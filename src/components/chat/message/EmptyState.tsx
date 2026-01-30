@@ -29,7 +29,7 @@ export default function EmptyState({ onUseSample }: EmptyStateProps) {
       <Empty
         image={
           <motion.div variants={float} animate="animate">
-            <CommentOutlined style={{ fontSize: '64px', color: '#667eea' }} />
+            <CommentOutlined style={{ fontSize: '64px', color: '#0EA5E9' }} />
           </motion.div>
         }
         description={

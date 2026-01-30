@@ -95,7 +95,7 @@ export default function VisionChatPage() {
 
   return (
     <GlobalLayout showFooter={false}>
-      <div style={{ 
+      <div className="vision-chat-container" style={{ 
         display: 'flex', 
         width: '100vw',
         height: 'calc(100vh - 64px)',
@@ -143,7 +143,7 @@ export default function VisionChatPage() {
         />
 
         {/* 主内容区 */}
-        <Layout style={{ background: '#ffffff', flex: 1, height: '100%', overflow: 'hidden' }}>
+        <Layout style={{ background: 'transparent', flex: 1, height: '100%', overflow: 'hidden' }}>
           <Content
             style={{
               display: 'flex',
@@ -153,7 +153,7 @@ export default function VisionChatPage() {
             }}
           >
             {/* 头部 */}
-            <div style={{ padding: '16px 24px' }}>
+            <div className="chat-header-enhanced" style={{ padding: '16px 24px' }}>
               <VisionChatHeader chatId={chatId} title={currentChatTitle} />
             </div>
 

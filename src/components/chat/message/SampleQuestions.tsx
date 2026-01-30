@@ -56,7 +56,7 @@ export default function SampleQuestions({ onUseSample }: SampleQuestionsProps) {
               transition: 'border-color 0.3s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#667eea'
+              e.currentTarget.style.borderColor = '#0EA5E9'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = '#e5e6eb'

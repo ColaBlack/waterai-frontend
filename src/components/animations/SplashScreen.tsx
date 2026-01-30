@@ -84,7 +84,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)',
             zIndex: 99999,
           }}
         >

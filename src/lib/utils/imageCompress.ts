@@ -1,24 +1,10 @@
-/**
- * 图片压缩工具函数
- */
-
 export interface CompressOptions {
-  /** 最大宽度（像素） */
   maxWidth?: number;
-  /** 最大高度（像素） */
   maxHeight?: number;
-  /** 压缩质量（0-1，默认0.8） */
   quality?: number;
-  /** 输出格式（默认'image/jpeg'） */
   outputFormat?: string;
 }
 
-/**
- * 压缩图片
- * @param file 原始图片文件
- * @param options 压缩选项
- * @returns 压缩后的File对象
- */
 export async function compressImage(
   file: File,
   options: CompressOptions = {}
@@ -37,7 +23,6 @@ export async function compressImage(
       const img = new Image();
       
       img.onload = () => {
-        // 计算新尺寸
         let width = img.width;
         let height = img.height;
         
@@ -55,7 +40,6 @@ export async function compressImage(
           }
         }
         
-        // 创建canvas进行压缩
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -66,10 +50,8 @@ export async function compressImage(
           return;
         }
         
-        // 绘制图片
         ctx.drawImage(img, 0, 0, width, height);
         
-        // 转换为blob
         canvas.toBlob(
           (blob) => {
             if (!blob) {
@@ -77,7 +59,6 @@ export async function compressImage(
               return;
             }
             
-            // 创建新的File对象
             const compressedFile = new File(
               [blob],
               file.name.replace(/\.[^/.]+$/, '') + '.jpg',
@@ -109,17 +90,10 @@ export async function compressImage(
   });
 }
 
-/**
- * 验证图片文件
- * @param file 文件对象
- * @param maxSize 最大文件大小（字节，默认5MB）
- * @returns 验证结果和错误信息
- */
 export function validateImageFile(
   file: File,
   maxSize: number = 5 * 1024 * 1024
 ): { valid: boolean; error?: string } {
-  // 验证文件类型
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   if (!allowedTypes.includes(file.type.toLowerCase())) {
     return {
@@ -128,7 +102,6 @@ export function validateImageFile(
     };
   }
   
-  // 验证文件大小
   if (file.size > maxSize) {
     return {
       valid: false,
@@ -138,5 +111,3 @@ export function validateImageFile(
   
   return { valid: true };
 }
-
-

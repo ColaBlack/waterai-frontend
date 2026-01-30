@@ -5,14 +5,20 @@ import { marked } from './config'
 
 interface MarkdownRendererProps {
   content: string
+  isStreaming?: boolean
 }
 
-export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export default function MarkdownRenderer({ content, isStreaming = false }: MarkdownRendererProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const lastContentRef = useRef<string>('')
 
   useLayoutEffect(() => {
-    if (!contentRef.current || content === lastContentRef.current) {
+    if (!contentRef.current) {
+      return
+    }
+
+    // 流式传输时，即使内容相同也要重新渲染，因为可能需要更新 Markdown 解析
+    if (!isStreaming && content === lastContentRef.current) {
       return
     }
 
@@ -25,8 +31,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         return
       }
 
-
-      // 尝试解析Markdown
+      // 始终尝试解析 Markdown，即使在流式传输中
       const html = marked.parse(contentStr) as string
       
       // 检查解析结果是否合理（避免内容丢失）
@@ -46,7 +51,7 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
         lastContentRef.current = contentStr
       }
     }
-  }, [content])
+  }, [content, isStreaming])
 
   return (
     <div

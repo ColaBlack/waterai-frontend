@@ -48,7 +48,7 @@ export default function ChatHeader({ chatId, title = 'chat' }: ChatHeaderProps) 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <Space>
-        <CommentOutlined style={{ fontSize: '24px', color: '#667eea' }} />
+        <CommentOutlined style={{ fontSize: '24px', color: '#0EA5E9' }} />
         <Title level={4} style={{ margin: 0 }}>
           AI 智能问答
         </Title>

@@ -40,7 +40,7 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
           width: '80px',
           height: '80px',
           border: '4px solid #f0f0f0',
-          borderTop: '4px solid #667eea',
+          borderTop: '4px solid #0EA5E9',
           borderRadius: '50%',
           marginBottom: '24px',
         }}
@@ -80,7 +80,7 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              background: '#667eea',
+              background: '#0EA5E9',
             }}
             animate={{
               y: [0, -12, 0],

@@ -9,6 +9,8 @@ import { RouteProgress } from '@/components/animations/RouteProgress'
 import './globals.css'
 import '@/styles/animations.css'
 import '@/styles/nprogress.css'
+import '@/styles/chat-enhanced.css'
+import '@/styles/vision-chat-enhanced.css'
 
 // 页面元数据配置
 export const metadata: Metadata = {
@@ -39,8 +41,12 @@ export default function RootLayout({
             {/* 配置 Ant Design 主题和国际化 */}
             <ConfigProvider locale={zhCN} theme={{
               token: {
-                colorPrimary: '#667eea', // 主色调：渐变蓝紫色
-                borderRadius: 8,         // 圆角大小
+                colorPrimary: '#0EA5E9', // 主色调：天空蓝
+                colorInfo: '#38BDF8',    // 信息色：亮天蓝
+                colorSuccess: '#22C55E', // 成功色：绿色
+                colorWarning: '#F97316', // 警告色：橙色
+                borderRadius: 12,        // 圆角大小
+                fontSize: 14,
               },
             }}>
               {/* 应用级别的 Ant Design 提供者 */}

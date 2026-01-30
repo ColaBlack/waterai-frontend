@@ -7,6 +7,7 @@ interface UseSendMessageParams {
   value: string
   selectedModel: string
   isText: boolean
+  enableThinking?: boolean
   imageFiles: UploadFile[]
   isConnecting: boolean
   chatId: string
@@ -19,6 +20,7 @@ export function useSendMessage({
   value,
   selectedModel,
   isText,
+  enableThinking = false,
   imageFiles,
   isConnecting,
   chatId,
@@ -37,6 +39,7 @@ export function useSendMessage({
     const config: ModelConfig = {
       model: selectedModel,
       isVision: !isText,
+      enableThinking: enableThinking,
     }
 
     if (!isText && imageFiles.length > 0) {
@@ -52,6 +55,7 @@ export function useSendMessage({
     value,
     selectedModel,
     isText,
+    enableThinking,
     imageFiles,
     isConnecting,
     chatId,

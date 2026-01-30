@@ -5,12 +5,17 @@
 export const messageStyles = {
   card: {
     user: {
-      backgroundColor: '#f0f2f5',
-      border: 'none',
+      backgroundColor: '#F3F4F6',
+      border: '1px solid #E5E7EB',
+      color: '#1F2937',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+      borderRadius: '18px 18px 4px 18px',
     },
     ai: {
       backgroundColor: '#ffffff',
-      border: '1px solid #e5e6eb',
+      border: '1px solid #E5E7EB',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+      borderRadius: '18px 18px 18px 4px',
     },
   },
   collapse: {

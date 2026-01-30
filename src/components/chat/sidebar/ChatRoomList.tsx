@@ -112,7 +112,7 @@ export default function ChatRoomList({
                 className="chat-room-item"
               >
           <List.Item.Meta
-            avatar={<MessageOutlined style={{ fontSize: '18px', color: '#667eea' }} />}
+            avatar={<MessageOutlined style={{ fontSize: '18px', color: '#0EA5E9' }} />}
             title={
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text ellipsis style={{ fontSize: '14px', fontWeight: 500, flex: 1 }}>

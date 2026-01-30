@@ -16,7 +16,7 @@ interface FloatingElementsProps {
 
 export const FloatingElements: React.FC<FloatingElementsProps> = ({
   count = 15,
-  colors = ['#667eea', '#52c41a', '#faad14', '#1890ff', '#722ed1'],
+  colors = ['#0EA5E9', '#22C55E', '#F97316', #38BDF8', '#0891B2'],
   size = { min: 20, max: 60 },
   speed = { min: 10, max: 25 },
 }) => {

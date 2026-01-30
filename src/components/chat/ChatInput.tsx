@@ -31,6 +31,7 @@ export default function ChatInput({
     value,
     selectedModel: modelConfig.selectedModel,
     isText: modelConfig.isText,
+    enableThinking: modelConfig.enableThinking,
     imageFiles,
     isConnecting,
     chatId,
@@ -40,7 +41,7 @@ export default function ChatInput({
   })
 
   return (
-    <div style={{
+    <div className="chat-input-enhanced" style={{
       borderTop: '1px solid #e5e6eb',
       backgroundColor: '#fafbfc',
       padding: '16px',
@@ -48,6 +49,8 @@ export default function ChatInput({
       <ModelConfigPanel
         selectedModel={modelConfig.selectedModel}
         onModelChange={modelConfig.setSelectedModel}
+        enableThinking={modelConfig.enableThinking}
+        onThinkingChange={modelConfig.setEnableThinking}
       />
 
       {!modelConfig.isText && (
@@ -87,6 +90,7 @@ export default function ChatInput({
             loading={isConnecting}
             disabled={!value.trim() || !chatId}
             size="large"
+            className="send-button-enhanced"
           >
             发送
           </Button>

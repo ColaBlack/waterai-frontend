@@ -7,15 +7,13 @@ import { MESSAGE_CONSTANTS, STORAGE_KEYS, API_CONSTANTS, TIME_CONSTANTS } from '
 import { BASE_URL } from '@/lib/utils/request'
 import { useUserStore } from '@/lib/store/userStore'
 
-// 消息状态类型
 interface MessagesState {
   messages: ChatMessage[]
-  renderCounter: number // 强制渲染计数器
+  renderCounter: number
 }
 
 import type { SSEMessageData } from '@/lib/utils/sse'
 
-// 消息action类型
 type MessagesAction = 
   | { type: 'SET_MESSAGES'; payload: ChatMessage[] }
   | { type: 'APPEND_TO_LAST_AI'; payload: string }
@@ -23,7 +21,6 @@ type MessagesAction =
   | { type: 'UPDATE_LAST_AI_MESSAGE'; payload: SSEMessageData }
   | { type: 'CLEAR_MESSAGES' }
 
-// 创建一个可以访问外部 ref 的 reducer 工厂函数
 function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
   return function messagesReducer(state: MessagesState, action: MessagesAction): MessagesState {
     let newState: MessagesState
@@ -44,7 +41,7 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
           newMessages[lastIndex] = {
             ...newMessages[lastIndex],
             content: newMessages[lastIndex].content + action.payload,
-            timestamp: Date.now() // 强制更新时间戳
+            timestamp: Date.now()
           }
           newState = {
             messages: newMessages,
@@ -80,70 +77,55 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
           const newMessages = [...state.messages]
           const currentMessage = newMessages[lastIndex]
           
-          // 安全检查：确保不会追加JSON字符串或对象到消息内容中
           let textToAppend = ''
           
-          // 确保 text 是字符串类型
           if (action.payload.text !== undefined && action.payload.text !== null) {
             if (typeof action.payload.text === 'string') {
               textToAppend = action.payload.text
             } else if (typeof action.payload.text === 'object') {
-              // 如果是对象，不追加（避免显示 [object Object]）
               textToAppend = ''
             } else {
-              // 其他类型，尝试转换为字符串
               textToAppend = String(action.payload.text)
             }
           }
           
-          // 如果text看起来像纯JSON字符串（以{开头且以}结尾），但不是代码块中的JSON，则不追加
           if (textToAppend) {
             const trimmed = textToAppend.trim()
             const currentContent = typeof currentMessage.content === 'string' ? currentMessage.content : String(currentMessage.content || '')
             
-            // 只有当这是一个完整的独立JSON对象，且不在代码块上下文中时才过滤
             if (trimmed.startsWith('{') && trimmed.endsWith('}') && 
-                !currentContent.includes('```json') && // 不在JSON代码块中
-                !trimmed.includes('\n') && // 不是多行JSON（工具调用的JSON通常是多行的）
-                trimmed.length < 200) { // 不是很长的JSON（工具调用的JSON通常较长）
-              // 看起来像JSON响应对象，不追加到消息内容中
+                !currentContent.includes('```json') &&
+                !trimmed.includes('\n') &&
+                trimmed.length < 200) {
               textToAppend = ''
             }
           }
           
-          // 确保 currentMessage.content 也是字符串
           const currentContent = typeof currentMessage.content === 'string' ? currentMessage.content : String(currentMessage.content || '')
           const newContent = textToAppend ? currentContent + textToAppend : currentContent
           
-          // 检查内容是否真的变化了
           const contentChanged = newContent !== currentContent
           
-          // 合并元数据 - 需要特殊处理数组字段
           let newMetadata = currentMessage.metadata ? { ...currentMessage.metadata } : {}
           let metadataChanged = false
           
           if (action.payload.metadata) {
-            // 合并工具调用 - 需要智能合并：如果有相同ID的工具，更新它；否则添加新的
             if (action.payload.metadata.toolCalls) {
               const existingToolCalls = newMetadata.toolCalls || []
               const newToolCalls = action.payload.metadata.toolCalls
               
-              // 创建工具调用映射，按ID或名称+参数组合来识别
               const toolCallMap = new Map<string, typeof existingToolCalls[0]>()
               
-              // 先添加现有的工具调用
               existingToolCalls.forEach(tc => {
                 const key = tc.id || `${tc.name}_${tc.arguments}`
                 toolCallMap.set(key, tc)
               })
               
-              // 合并新的工具调用：如果有相同ID/键，更新它（保留更完整的信息）；否则添加
               newToolCalls.forEach(tc => {
                 const key = tc.id || `${tc.name}_${tc.arguments}`
                 const existing = toolCallMap.get(key)
                 
                 if (existing) {
-                  // 检查是否有实际变化
                   const hasChanges = 
                     (tc.result !== undefined && tc.result !== existing.result) ||
                     (tc.status && tc.status !== existing.status) ||
@@ -151,20 +133,15 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
                   
                   if (hasChanges) {
                     metadataChanged = true
-                    // 合并：优先使用新数据，但如果新数据缺少某些字段，保留旧的
                     toolCallMap.set(key, {
                       ...existing,
                       ...tc,
-                      // 如果新数据有结果，使用新的；否则保留旧的
                       result: tc.result !== undefined ? tc.result : existing.result,
-                      // 状态也优先使用新的
                       status: tc.status || existing.status,
-                      // 错误信息也优先使用新的
                       error: tc.error || existing.error
                     })
                   }
                 } else {
-                  // 新工具调用，直接添加
                   metadataChanged = true
                   toolCallMap.set(key, tc)
                 }
@@ -175,15 +152,12 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
               }
             }
             
-            // 合并RAG文档（数组需要合并而不是覆盖，但要去重）
             if (action.payload.metadata.retrievedDocuments) {
               const existingDocs = newMetadata.retrievedDocuments || []
               const newDocs = action.payload.metadata.retrievedDocuments
               
-              // 检查是否有新文档
               if (newDocs.length > 0 && newDocs.length !== existingDocs.length) {
                 metadataChanged = true
-                // 使用ID去重，如果没有ID则使用内容+来源的组合
                 const docMap = new Map<string, typeof existingDocs[0]>()
                 
                 existingDocs.forEach(doc => {
@@ -202,7 +176,6 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
               }
             }
             
-            // 其他字段直接覆盖
             if (action.payload.metadata.finishReason && action.payload.metadata.finishReason !== newMetadata.finishReason) {
               metadataChanged = true
               newMetadata.finishReason = action.payload.metadata.finishReason
@@ -223,9 +196,10 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
             }
           }
           
-          // 只有在内容或元数据真正变化时才更新状态
-          if (!contentChanged && !metadataChanged) {
-            // 没有实际变化，返回原状态，避免不必要的重新渲染
+          const thinkingProcessChanged = action.payload.thinkingProcess && 
+            action.payload.thinkingProcess !== currentMessage.thinkingProcess
+          
+          if (!contentChanged && !metadataChanged && !thinkingProcessChanged) {
             return state
           }
           
@@ -233,16 +207,13 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
             ...currentMessage,
             content: newContent,
             metadata: Object.keys(newMetadata).length > 0 ? newMetadata : undefined,
-            // 更新思考过程
             thinkingProcess: action.payload.thinkingProcess || currentMessage.thinkingProcess,
-            // 只有在内容变化时才更新时间戳
-            timestamp: contentChanged ? Date.now() : currentMessage.timestamp
+            timestamp: (contentChanged || thinkingProcessChanged) ? Date.now() : currentMessage.timestamp
           }
           
-          // 只有在内容变化时才增加 renderCounter
           newState = {
             messages: newMessages,
-            renderCounter: contentChanged ? state.renderCounter + 1 : state.renderCounter
+            renderCounter: (contentChanged || thinkingProcessChanged) ? state.renderCounter + 1 : state.renderCounter
           }
           messagesRef.current = newMessages
           return newState
@@ -264,17 +235,13 @@ function createMessagesReducer(messagesRef: MutableRefObject<ChatMessage[]>) {
   }
 }
 
-/**
- * 聊天消息管理 Hook
- */
 export function useChatMessages(
   chatId: string,
   messageApi: MessageInstance,
   onFirstMessage?: (prompt: string) => Promise<string | null>,
-  onMessageSent?: () => void // 消息发送完成后的回调（用于刷新聊天室列表等）
+  onMessageSent?: () => void
 ) {
   const { loginUser } = useUserStore()
-  // 使用 ref 保存最新的消息，避免在依赖数组中包含 messagesState.messages
   const messagesRef = useRef<ChatMessage[]>([])
   const messagesReducerRef = useRef(createMessagesReducer(messagesRef))
   const [messagesState, dispatch] = useReducer(messagesReducerRef.current, {
@@ -285,13 +252,11 @@ export function useChatMessages(
   const [isConnecting, setIsConnecting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const sseClientRef = useRef<SSEClient | null>(null)
-  const isSendingFirstMessageRef = useRef(false) // 标记是否正在发送第一条消息
+  const isSendingFirstMessageRef = useRef(false)
 
-  // 从 localStorage 加载历史消息
   const loadHistoryMessagesFromLocal = useCallback(() => {
     if (!chatId) return
 
-    // 检查是否在客户端环境（避免SSR错误）
     if (typeof window === 'undefined') {
       dispatch({ type: 'SET_MESSAGES', payload: [] })
       return
@@ -304,29 +269,22 @@ export function useChatMessages(
       if (historyStr) {
         const loadedMessages = JSON.parse(historyStr)
         dispatch({ type: 'SET_MESSAGES', payload: loadedMessages })
-        // messagesRef 会在 reducer 中自动更新
       } else {
         dispatch({ type: 'SET_MESSAGES', payload: [] })
-        // messagesRef 会在 reducer 中自动更新
       }
     } catch (error) {
       dispatch({ type: 'SET_MESSAGES', payload: [] })
-      // messagesRef 会在 reducer 中自动更新
     }
   }, [chatId])
 
-  // 从后端加载历史消息
   const loadHistoryMessages = useCallback(async () => {
     if (!chatId) return
 
-    // 如果正在发送第一条消息，不要加载历史消息（避免覆盖正在发送的消息）
     if (isSendingFirstMessageRef.current) {
       return
     }
 
-    // 检查JWT token和用户ID（仅在客户端环境）
     if (typeof window === 'undefined') {
-      // 服务端渲染时不加载历史消息
       return
     }
     
@@ -334,7 +292,6 @@ export function useChatMessages(
     const userId = localStorage.getItem('userId')
     
     if (!token || !userId) {
-      // 如果用户未登录，不加载历史消息
       loadHistoryMessagesFromLocal()
       return
     }
@@ -361,69 +318,48 @@ export function useChatMessages(
           }
         })
         
-        // 如果后端返回了消息，或者当前没有消息且后端也没有消息（新对话），则更新
-        // 如果当前有消息但后端没有（正在发送第一条消息），则保留当前消息
         if (convertedMessages.length > 0) {
-          // 后端有消息，直接加载
         dispatch({ type: 'SET_MESSAGES', payload: convertedMessages })
         messagesRef.current = convertedMessages
         saveHistoryMessages(convertedMessages)
         } else if (messagesRef.current.length === 0) {
-          // 当前没有消息，后端也没有消息，保持空列表
           dispatch({ type: 'SET_MESSAGES', payload: [] })
           messagesRef.current = []
-        } else {
-          // 当前有消息但后端没有消息，可能是正在发送第一条消息，保留当前消息
         }
         return
       }
     } catch (error: any) {
-      // 静默处理错误，包括"聊天室不存在"的情况
-      // 如果聊天室不存在（新聊天室），这是正常情况，不应该显示错误
       const status = error?.response?.status
       const errorData = error?.response?.data
       const errorMessage = errorData?.message || error?.message || ''
-      const errorCode = errorData?.code
       
-      // 判断是否是"聊天室不存在"的错误
-      // 可能是 HTTP 404、401 或者业务错误码
       const isChatRoomNotExists = 
-        status === 404 || // HTTP 404 Not Found
-        status === 401 || // HTTP 401 Unauthorized (可能是后端返回的)
+        status === 404 ||
+        status === 401 ||
         errorMessage.includes('聊天室不存在') ||
         errorMessage.includes('聊天室') && errorMessage.includes('不存在')
       
-      if (isChatRoomNotExists) {
-        // 聊天室不存在是正常情况（新聊天室），静默处理
-        // 这是预期的行为，不应该显示错误给用户
-      } else {
-        // 其他错误（网络错误、服务器错误等），静默处理
-        // 避免干扰用户体验，因为这些错误通常是暂时的
+      if (!isChatRoomNotExists) {
       }
     }
     
-    // 只在不是正在发送第一条消息时才加载本地消息
     if (!isSendingFirstMessageRef.current) {
     loadHistoryMessagesFromLocal()
     }
   }, [chatId, loadHistoryMessagesFromLocal])
 
-  // 保存消息到 localStorage
   const saveHistoryMessages = useCallback((msgs: ChatMessage[]) => {
     if (!chatId) return
 
-    // 检查是否在客户端环境（避免SSR错误）
     if (typeof window === 'undefined') return
 
     try {
       const historyKey = `${STORAGE_KEYS.CHAT_HISTORY_PREFIX}${chatId}`
       localStorage.setItem(historyKey, JSON.stringify(msgs))
     } catch (error) {
-      // 静默失败
     }
   }, [chatId])
 
-  // 发送消息
   const sendMessage = useCallback(async (config: ModelConfig) => {
     const prompt = userInput.trim()
 
@@ -431,16 +367,13 @@ export function useChatMessages(
       return
     }
 
-    // 检查用户是否登录（检查JWT token）
     if (typeof window === 'undefined') {
-      // 服务端渲染时不执行发送消息
       return
     }
     
     const token = localStorage.getItem('token')
     if (!token) {
       messageApi.error('请先登录后再发送消息')
-      // 跳转到登录页面
       window.location.href = '/user/login?redirect=' + encodeURIComponent(window.location.href)
       return
     }
@@ -458,27 +391,17 @@ export function useChatMessages(
     const isFirstMessage = messagesState.messages.length === 0
     let actualChatId = chatId
     
-    // 标记正在发送第一条消息
     if (isFirstMessage) {
       isSendingFirstMessageRef.current = true
     }
     
-    // 如果后端支持自动创建聊天室，不再需要预先创建
-    // 直接使用当前的 chatId，后端会自动创建（如果不存在）
-    // 保留 onFirstMessage 逻辑作为可选的回调（用于更新 URL 等）
     if (isFirstMessage && onFirstMessage) {
-      // 不再需要预先创建聊天室，后端会自动创建
-      // 但保留回调逻辑，以便后续可能需要的处理
       try {
         const newChatId = await onFirstMessage(prompt)
         if (newChatId) {
           actualChatId = newChatId
         }
-        // 如果 onFirstMessage 返回 null 或失败，仍然继续发送消息
-        // 因为后端会自动创建聊天室
       } catch (error) {
-        // 即使 onFirstMessage 失败，也继续发送消息
-        // 因为后端会自动创建聊天室
       }
     }
 
@@ -517,7 +440,8 @@ export function useChatMessages(
           chatId: actualChatId,
           chatRoomId: actualChatId, // 聊天室编号，如果不存在则后端自动创建
           imageUrls: config.imageUrls || [],
-          visionModelType: config.model === 'vision' ? 'vision' : 'vision_reasoning'
+          visionModelName: config.model,
+          enableThinking: config.enableThinking || false
         }
       } else {
         endpoint = '/ai/chat'
@@ -525,7 +449,8 @@ export function useChatMessages(
           userPrompt: prompt,
           chatId: actualChatId,
           chatRoomId: actualChatId,
-          modelName: config.model
+          modelName: config.model,
+          enableThinking: config.enableThinking || false
         }
       }
 
@@ -541,7 +466,6 @@ export function useChatMessages(
           },
           onOpen: () => {
             setIsLoading(false)
-            // 连接成功后立即保存当前消息（包括用户消息和空的AI消息）
             setTimeout(() => {
               saveHistoryMessages(messagesRef.current)
             }, 0)
@@ -551,29 +475,22 @@ export function useChatMessages(
             setIsLoading(false)
             dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
             
-            // 根据错误类型显示不同的错误消息
             const errorMessage = error.message || ''
             if (errorMessage.includes('UNAUTHORIZED')) {
-              // 401 错误 - 用户未登录或 session 无效
               messageApi.error('登录已过期，请重新登录')
-              // 刷新用户信息
               if (typeof window !== 'undefined') {
                 setTimeout(() => {
                   window.location.href = '/user/login?redirect=' + encodeURIComponent(window.location.href)
                 }, 1500)
               }
             } else if (errorMessage.includes('FORBIDDEN')) {
-              // 403 错误 - 权限不足
               messageApi.error('权限不足，无法发送消息')
             } else {
-              // 其他错误
               messageApi.error('连接失败，请稍后重试')
             }
             
-            // 使用 ref 获取最新消息，避免依赖闭包
             setTimeout(() => {
               saveHistoryMessages(messagesRef.current)
-              // 清除第一条消息标记
               isSendingFirstMessageRef.current = false
             }, 0)
           },
@@ -581,14 +498,10 @@ export function useChatMessages(
             setIsConnecting(false)
             setIsLoading(false)
             dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
-            // 使用 ref 获取最新消息，避免依赖闭包
             setTimeout(() => {
               saveHistoryMessages(messagesRef.current)
-              // 清除第一条消息标记
               isSendingFirstMessageRef.current = false
               
-              // 如果后端自动创建了聊天室，刷新聊天室列表
-              // 延迟执行，确保后端已经保存了聊天室
               if (onMessageSent) {
                 setTimeout(() => {
                   onMessageSent()
@@ -603,12 +516,10 @@ export function useChatMessages(
       setIsLoading(false)
       dispatch({ type: 'UPDATE_LAST_AI_STREAMING', payload: false })
       messageApi.error('发送失败，请稍后重试')
-      // 清除第一条消息标记
       isSendingFirstMessageRef.current = false
     }
   }, [chatId, userInput, isConnecting, messagesState.messages.length, onFirstMessage, onMessageSent, saveHistoryMessages, messageApi])
 
-  // 关闭 SSE 连接
   const closeConnection = useCallback(() => {
     if (sseClientRef.current) {
       sseClientRef.current.close()
@@ -616,15 +527,14 @@ export function useChatMessages(
     }
   }, [])
 
-  // 清空消息列表
   const clearMessages = useCallback(() => {
     dispatch({ type: 'CLEAR_MESSAGES' })
-    isSendingFirstMessageRef.current = false // 清除第一条消息标记
+    isSendingFirstMessageRef.current = false
   }, [])
 
   return {
     messages: messagesState.messages,
-    renderCounter: messagesState.renderCounter, // 导出渲染计数器
+    renderCounter: messagesState.renderCounter,
     userInput,
     isConnecting,
     isLoading,

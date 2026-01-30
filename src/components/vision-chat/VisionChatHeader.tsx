@@ -48,7 +48,7 @@ export default function VisionChatHeader({ chatId, title = 'vision_chat' }: Visi
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <Space>
-        <CameraOutlined style={{ fontSize: '24px', color: '#667eea' }} />
+        <CameraOutlined style={{ fontSize: '24px', color: '#0EA5E9' }} />
         <Title level={4} style={{ margin: 0 }}>
           视觉AI对话
         </Title>

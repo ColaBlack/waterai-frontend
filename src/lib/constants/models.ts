@@ -4,19 +4,20 @@
 
 /** 文本模型列表 */
 export const TEXT_MODELS = [
-  { label: 'GLM-Z1-Flash（深度推理，不支持MCP）', value: 'glm-z1-flash' },
-  { label: 'GLM-4.5-Flash（标准）', value: 'glm-4.5-flash' },
-  { label: 'GLM-4-Flash（普通）', value: 'glm-4-flash' },
+  { label: 'DeepSeek V3.2（默认模型）', value: 'deepseek-v3.2' },
+  { label: 'Kimi K2 Thinking（深度思考）', value: 'kimi-k2-thinking' },
+  { label: 'Qwen3 Max 2026-01-23', value: 'qwen3-max-2026-01-23' },
+  { label: 'MiniMax M2.1（仅思考模式）', value: 'MiniMax-M2.1' },
 ] as const
 
 /** 视觉模型列表 */
 export const VISION_MODELS = [
-  { label: 'GLM-4V-Flash（快速识别）', value: 'vision' },
-  { label: 'GLM-4.1V-Thinking-Flash（深度思考）', value: 'vision_reasoning' },
+  { label: 'Qwen3-VL-Flash 2026-01-22（通义千问视觉-快速）', value: 'qwen3-vl-flash-2026-01-22' },
+  { label: 'Qwen3-VL-Plus 2025-12-19（通义千问视觉-增强）', value: 'qwen3-vl-plus-2025-12-19' },
 ] as const
 
 /** 默认选中的模型 */
-export const DEFAULT_MODEL = 'glm-4.5-flash'
+export const DEFAULT_MODEL = 'deepseek-v3.2'
 
 /** 文本模型值列表 */
 export const TEXT_MODEL_VALUES = TEXT_MODELS.map(m => m.value)
@@ -24,6 +25,11 @@ export const TEXT_MODEL_VALUES = TEXT_MODELS.map(m => m.value)
 /** 判断是否为文本模型 */
 export function isTextModel(model: string): boolean {
   return TEXT_MODEL_VALUES.includes(model as any)
+}
+
+/** 判断是否为 MiniMax-M2.1 模型（强制思考模式） */
+export function isMiniMaxM21(model: string): boolean {
+  return model === 'MiniMax-M2.1'
 }
 
 /** 图片上传相关常量 */

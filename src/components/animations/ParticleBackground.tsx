@@ -26,8 +26,8 @@ interface Particle {
 
 export const ParticleBackground: React.FC<ParticleBackgroundProps> = ({
   particleCount = 80,
-  particleColor = '#667eea',
-  lineColor = '#667eea',
+  particleColor = '#0EA5E9',
+  lineColor = '#0EA5E9',
   particleSize = 2,
   speed = 0.5,
   connectDistance = 120,

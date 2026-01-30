@@ -10,7 +10,7 @@ interface AvatarBadgeProps {
 
 const AVATAR_STYLES = {
   user: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#0EA5E9',
   },
   ai: {
     backgroundColor: '#52c41a',

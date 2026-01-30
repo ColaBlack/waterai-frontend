@@ -1,52 +1,28 @@
-/**
- * 消息相关类型定义
- */
-
-/** 消息角色类型 */
 export type MessageRole = 'user' | 'ai'
 
-/** 工具调用状态 */
 export type ToolCallStatus = 'pending' | 'calling' | 'completed' | 'failed'
 
-/** 工具调用信息 */
 export interface ToolCall {
-  /** 工具ID */
   id?: string
-  /** 工具名称 */
   name: string
-  /** 工具参数 */
   arguments?: string
-  /** 工具调用结果 */
   result?: string
-  /** 工具调用状态 */
   status?: ToolCallStatus
-  /** 错误信息（如果调用失败） */
   error?: string
 }
 
-/** RAG检索文档 */
 export interface RetrievedDocument {
-  /** 文档ID */
   id?: string
-  /** 文档内容 */
   content: string
-  /** 相似度分数 */
   score?: number
-  /** 文档来源/标题 */
   source?: string
 }
 
-/** AI消息元数据 */
 export interface AIMessageMetadata {
-  /** 工具调用列表 */
   toolCalls?: ToolCall[]
-  /** RAG检索到的文档 */
   retrievedDocuments?: RetrievedDocument[]
-  /** 完成原因 */
   finishReason?: string
-  /** 模型ID */
   modelId?: string
-  /** Token使用情况 */
   usage?: {
     promptTokens?: number
     completionTokens?: number
@@ -54,27 +30,17 @@ export interface AIMessageMetadata {
   }
 }
 
-/** 聊天消息接口 */
 export interface ChatMessage {
-  /** 消息角色：用户或AI */
   role: MessageRole
-  /** 消息内容（可能包含Markdown和<think>标签） */
   content: string
-  /** 消息时间戳 */
   timestamp: number
-  /** 是否正在流式输出 */
   isStreaming?: boolean
-  /** AI消息的元数据（仅当role为'ai'时有效） */
   metadata?: AIMessageMetadata
-  /** AI思考过程（从<think></think>标签中提取） */
   thinkingProcess?: string
 }
 
-/** 解析后的消息内容 */
 export interface ParsedMessageContent {
-  /** 思考过程内容（从<think>标签中提取） */
   thinkingProcess: string
-  /** 正常消息内容（移除<think>标签后的内容） */
   normalContent: string
 }
 
@@ -86,6 +52,8 @@ export interface ModelConfig {
   isVision: boolean
   /** 图片URL列表（视觉模型专用） */
   imageUrls?: string[]
+  /** 是否启用深度思考模式（思维链） */
+  enableThinking?: boolean
 }
 
 /** 后端SSE响应结构 */

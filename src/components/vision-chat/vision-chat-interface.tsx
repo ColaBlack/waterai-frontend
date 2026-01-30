@@ -1,13 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { SendOutlined, PictureOutlined, CloseOutlined, RobotOutlined, UserOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
-import { Button, Input, Card, Select, Space, Empty, Typography, App, Modal, Image as AntImage, Spin, Progress } from 'antd';
-import { askVisionQuestion, getChatRecords } from '@/lib/api/chatService/api/visionChatController';
+import { SendOutlined, PictureOutlined, CloseOutlined, CameraOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Button, Input, Card, Select, Space, Empty, App, Modal, Image as AntImage, Spin } from 'antd';
+import { getChatRecords } from '@/lib/api/chatService/api/visionChatController';
+import AvatarBadge from '@/components/chat/message/AvatarBadge';
+import { formatTimestamp } from '@/lib/utils/messageParser';
+import { VISION_MODELS } from '@/lib/constants/models';
+import { compressImage, validateImageFile } from '@/lib/utils/imageCompress';
+import { ImageCropper } from '@/components/ui/image-cropper';
+import StreamingText from '@/components/chat/StreamingText';
+import { useUserStore } from '@/lib/store/userStore';
+import { CopyButton } from '@/components/chat/CopyButton';
 import { fileApi } from '@/lib/api/file';
-import { cn } from '@/lib/utils';
 
-// 视觉聊天记录类型定义
 interface VisionChatRecord {
   id?: number
   chatId?: string
@@ -23,37 +29,24 @@ interface VisionChatRecord {
   updateTime?: string
   [key: string]: any
 }
-import AvatarBadge from '@/components/chat/message/AvatarBadge';
-import { formatTimestamp } from '@/lib/utils/messageParser';
-import { VISION_MODELS } from '@/lib/constants/models';
-import { compressImage, validateImageFile } from '@/lib/utils/imageCompress';
-import { ImageCropper } from '@/components/ui/image-cropper';
-import StreamingText from '@/components/chat/StreamingText';
-import { useUserStore } from '@/lib/store/userStore';
-import { CopyButton } from '@/components/chat/CopyButton';
-
-const { Text } = Typography;
 
 interface VisionChatInterfaceProps {
   chatId: string;
   onNewMessage?: (message: VisionChatRecord) => void;
-  className?: string;
 }
 
 export default function VisionChatInterface({ 
   chatId, 
-  onNewMessage, 
-  className 
+  onNewMessage
 }: VisionChatInterfaceProps) {
   const { message } = App.useApp();
   const { loginUser } = useUserStore();
   const [messages, setMessages] = useState<VisionChatRecord[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [modelType, setModelType] = useState<'vision' | 'vision_reasoning'>('vision');
+  const [modelName, setModelName] = useState<string>('qwen3-vl-flash-2026-01-22');
   const [streamingResponse, setStreamingResponse] = useState('');
   const [cropperVisible, setCropperVisible] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -63,39 +56,33 @@ export default function VisionChatInterface({
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isSendingMessageRef = useRef(false); // 标记是否正在发送消息
+  const isSendingMessageRef = useRef(false);
 
-  // 加载聊天记录
   useEffect(() => {
     loadChatHistory();
   }, [chatId]);
 
-  // 自动滚动到底部
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingResponse]);
 
   const loadChatHistory = async () => {
-    // 如果正在发送消息，不要加载历史记录（避免覆盖正在发送的消息）
     if (isSendingMessageRef.current) {
       return;
     }
 
     try {
       const response = await getChatRecords({ chatId });
-      // 后端返回格式: { code: 200, data: VisionChatRecord[], message: "..." }
       if (response.data) {
         const data: any = response.data;
         if (data.code === 200 && Array.isArray(data.data)) {
           setMessages(data.data);
         } else if (Array.isArray(response.data)) {
-          // 直接返回数组的情况
           setMessages(response.data);
         }
       }
     } catch (error) {
       console.error('加载聊天记录失败:', error);
-      // 静默处理错误，避免在新聊天室时显示错误
     }
   };
 
@@ -104,43 +91,29 @@ export default function VisionChatInterface({
   };
 
   const handleFileSelect = async (files: File[]) => {
-    // 限制只能上传1张图片
     if (files.length > 1) {
       message.error('只能上传1张图片');
       return;
     }
     
-    // 如果已经有图片，替换而不是追加
     if (selectedImageFiles.length > 0 || imageUrls.length > 0) {
       message.warning('已存在图片，将替换为新图片');
-      // 清理旧的预览URL
-      imageUrls.forEach(url => {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
       setImageUrls([]);
       setSelectedImageFiles([]);
     }
     
     const file = files[0];
-    
-    // 验证图片
-    const validation = validateImageFile(file, 5 * 1024 * 1024); // 5MB
+    const validation = validateImageFile(file, 5 * 1024 * 1024);
     if (!validation.valid) {
       message.error(validation.error);
       return;
     }
     
-    // 如果图片尺寸较大，显示裁剪界面
     const img = new window.Image()
     const objectUrl = URL.createObjectURL(file);
     
     img.onload = async () => {
-      // 清理创建的 URL
       URL.revokeObjectURL(objectUrl);
-      
-      // 始终显示裁剪界面,让用户选择是否裁剪
       setSelectedFile(file);
       setCropperVisible(true);
     };
@@ -152,75 +125,46 @@ export default function VisionChatInterface({
     img.src = objectUrl;
   }
   
-  // 立即上传图片到图床
-  const uploadImageImmediately = async (file: File) => {
+  const uploadImageToServer = async (file: File): Promise<string> => {
+    try {
+      const imageUrl = await fileApi.uploadChatImage(file, chatId);
+      return imageUrl;
+    } catch (error) {
+      console.error('上传图片失败:', error);
+      throw error;
+    }
+  };
+
+  const processAndUploadImage = async (file: File) => {
     setIsUploading(true);
     try {
-      // 压缩图片
       const compressedFile = await compressImage(file, {
         maxWidth: 1920,
         maxHeight: 1920,
         quality: 0.8,
       });
       
-      // 上传到图床
-      const imageUrl = await handleImageUpload(compressedFile);
-      
-      if (imageUrl) {
-        // 保存图床URL
-        setImageUrls([imageUrl]);
-        message.success('图片上传成功');
-      } else {
-        message.error('图片上传失败');
-      }
+      const imageUrl = await uploadImageToServer(compressedFile);
+      setImageUrls([imageUrl]);
+      message.success('图片上传成功');
     } catch (error) {
-      console.error('图片上传失败:', error);
-      message.error('图片上传失败');
+      console.error('图片处理失败:', error);
+      message.error('图片上传失败，请重试');
     } finally {
       setIsUploading(false);
-    }
-  }
-
-  const handleImageUpload = async (file: File): Promise<string | null> => {
-    try {
-      // 压缩图片
-      const compressedFile = await compressImage(file, {
-        maxWidth: 1920,
-        maxHeight: 1920,
-        quality: 0.8,
-      });
-      
-      // 上传压缩后的图片，fileApi.uploadChatImage 直接返回 URL 字符串
-      const imageUrl = await fileApi.uploadChatImage(compressedFile, chatId);
-      
-      return imageUrl;
-    } catch (error: any) {
-      console.error('图片上传失败:', error);
-      throw error;
     }
   };
 
   const handleCropComplete = async (croppedFile: File) => {
     setCropperVisible(false);
     setSelectedFile(null);
-    // 立即上传裁剪后的图片到图床
-    await uploadImageImmediately(croppedFile);
+    // 处理裁剪后的图片（上传到图床）
+    await processAndUploadImage(croppedFile);
   };
 
   const removeImage = () => {
-    // 清理预览URL
-    imageUrls.forEach(url => {
-      if (url.startsWith('blob:')) {
-        URL.revokeObjectURL(url);
-      }
-    });
     setImageUrls([]);
     setSelectedImageFiles([]);
-  };
-
-  const handleImagePreview = (url: string) => {
-    setPreviewImage(url);
-    setPreviewVisible(true);
   };
 
   const handleSend = async () => {
@@ -231,9 +175,8 @@ export default function VisionChatInterface({
     setInputValue('');
     setIsLoading(true);
     setStreamingResponse('');
-    isSendingMessageRef.current = true; // 标记开始发送消息
+    isSendingMessageRef.current = true;
 
-    // 获取用户ID
     const userId = loginUser?.id || 
       (typeof window !== 'undefined' && localStorage.getItem('userId') 
         ? parseInt(localStorage.getItem('userId')!) 
@@ -245,26 +188,22 @@ export default function VisionChatInterface({
       return;
     }
 
-    // 使用已上传的图片URL（图片已在选择时上传到图床）
-    const uploadedImageUrls = [...imageUrls];
+    const imageUrlList = [...imageUrls];
 
-    // 添加用户消息到界面
     const newUserMessage: VisionChatRecord = {
       id: Date.now(),
       chatId,
       userId,
       messageType: 'user',
       content: userMessage || '请分析这些图片',
-      imageUrls: uploadedImageUrls,
+      imageUrls: imageUrlList,
       createTime: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, newUserMessage]);
-    // 清空图片URL（不需要清理，因为是图床URL）
     setImageUrls([]);
 
     try {
-      // 获取token用于认证（网关会从JWT中提取userId）
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       
       const headers: Record<string, string> = {
@@ -280,8 +219,8 @@ export default function VisionChatInterface({
         body: JSON.stringify({
           userPrompt: userMessage || '请分析这些图片',
           chatId,
-          imageUrls: uploadedImageUrls, // 发送MinIO URL给AI（智谱AI不支持Base64）
-          visionReasoningModel: modelType === 'vision_reasoning',
+          imageUrls: imageUrlList,
+          visionModelName: modelName,
         }),
       });
 
@@ -289,7 +228,6 @@ export default function VisionChatInterface({
         throw new Error('请求失败');
       }
 
-      // 处理 SSE 流式响应
       const reader = response.body?.getReader();
       if (!reader) throw new Error('无法读取响应流');
 
@@ -313,7 +251,6 @@ export default function VisionChatInterface({
         }
       }
 
-      // 添加AI回复到消息列表
       const aiMessage: VisionChatRecord = {
         id: Date.now() + 1,
         chatId,
@@ -321,8 +258,7 @@ export default function VisionChatInterface({
         messageType: 'assistant',
         content: fullResponse,
         imageUrls: [],
-        modelName: modelType === 'vision_reasoning' ? 'GLM-4.1V-Thinking-Flash' : 'GLM-4V-Flash',
-        visionReasoningModel: modelType === 'vision_reasoning',
+        modelName: modelName,
         createTime: new Date().toISOString(),
       };
 
@@ -330,22 +266,21 @@ export default function VisionChatInterface({
       setStreamingResponse('');
       onNewMessage?.(aiMessage);
 
-      // 延迟重新加载历史记录，确保后端已保存完成
       setTimeout(() => {
-        isSendingMessageRef.current = false; // 标记发送完成
-        loadChatHistory(); // 重新加载以同步后端数据
-      }, 1000); // 延迟1秒，给后端足够时间保存
+        isSendingMessageRef.current = false;
+        loadChatHistory();
+      }, 1000);
 
     } catch (error) {
       console.error('发送消息失败:', error);
       setStreamingResponse('');
-      isSendingMessageRef.current = false; // 发送失败也要重置标志
+      isSendingMessageRef.current = false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -360,15 +295,17 @@ export default function VisionChatInterface({
         borderBottom: '1px solid #e5e6eb',
         background: '#fafbfc',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px', color: '#4e5969', fontWeight: 500 }}>模型选择：</span>
-          <Select
-            value={modelType}
-            onChange={(value) => setModelType(value as 'vision' | 'vision_reasoning')}
-            style={{ width: 220 }}
-            options={VISION_MODELS as any}
-          />
-        </div>
+        <Space wrap size="middle" style={{ width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px', color: '#4e5969', fontWeight: 500 }}>模型选择：</span>
+            <Select
+              value={modelName}
+              onChange={(value) => setModelName(value)}
+              style={{ width: 300 }}
+              options={VISION_MODELS as any}
+            />
+          </div>
+        </Space>
       </div>
 
       {/* 消息列表 */}
@@ -435,7 +372,7 @@ export default function VisionChatInterface({
                                   alt={`图片 ${index + 1}`}
                                   style={{
                                     width: '100%',
-                                    maxWidth: message.imageUrls.length === 1 ? '400px' : '200px',
+                                    maxWidth: (message.imageUrls?.length || 0) === 1 ? '400px' : '200px',
                                     maxHeight: '200px',
                                     objectFit: 'contain',
                                     cursor: 'pointer',
@@ -463,7 +400,7 @@ export default function VisionChatInterface({
                         {isUser ? (
                           message.content
                         ) : (
-                          <StreamingText content={message.content} isStreaming={false} />
+                          <StreamingText content={message.content || ''} isStreaming={false} />
                         )}
                       </div>
 
@@ -476,8 +413,8 @@ export default function VisionChatInterface({
                         alignItems: 'center',
                         justifyContent: 'space-between'
                       }}>
-                        <span>{formatTimestamp(new Date(message.createTime).getTime())}</span>
-                        <CopyButton text={message.content} />
+                        <span>{message.createTime ? formatTimestamp(new Date(message.createTime).getTime()) : ''}</span>
+                        <CopyButton text={message.content || ''} />
                       </div>
                     </Card>
                   </div>
@@ -571,7 +508,7 @@ export default function VisionChatInterface({
           </div>
         )}
         
-        {/* 上传进度提示 */}
+        {/* 处理进度提示 */}
         {isUploading && (
           <div style={{ 
             marginBottom: '12px',
@@ -583,7 +520,7 @@ export default function VisionChatInterface({
             gap: '12px'
           }}>
             <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} spin />} />
-            <span style={{ color: '#666' }}>正在上传图片到图床...</span>
+            <span style={{ color: '#666' }}>正在上传图片到服务器...</span>
           </div>
         )}
 
@@ -659,7 +596,7 @@ export default function VisionChatInterface({
             ref={textareaRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
               placeholder={
                 imageUrls.length > 0
                   ? '请输入您的问题（Enter 发送，Shift+Enter 换行）'

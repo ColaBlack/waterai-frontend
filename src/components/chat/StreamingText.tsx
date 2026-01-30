@@ -12,7 +12,7 @@ export default function StreamingText({ content, isStreaming = false }: Streamin
   return (
     <div style={{ position: 'relative', display: 'block', width: '100%' }}>
       <div>
-        <MarkdownRenderer content={content} />
+        <MarkdownRenderer content={content} isStreaming={isStreaming} />
       </div>
 
       {isStreaming && content && (

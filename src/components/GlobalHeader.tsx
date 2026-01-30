@@ -158,21 +158,28 @@ export default function GlobalHeader() {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'space-between',
-      background: '#fff',
-      borderBottom: '1px solid #f0f0f0',
-      padding: '0 24px',
-      height: '64px',
+      background: 'rgba(255, 255, 255, 0.8)',
+      backdropFilter: 'blur(10px)',
+      borderBottom: '1px solid rgba(225, 29, 72, 0.1)',
+      padding: '0 32px',
+      height: '72px',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 1000,
     }}>
       {/* 左侧：平台标题和导航菜单 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flex: 1, minWidth: 0 }}>
         {/* 平台名称，使用渐变文字效果 */}
         <div style={{ 
-          fontSize: '18px', 
-          fontWeight: 'bold', 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          fontSize: '20px', 
+          fontWeight: 700, 
+          background: 'linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           whiteSpace: 'nowrap',
+          fontFamily: "'Fira Code', monospace",
+          flexShrink: 0,
         }}>
           水产品安全监测平台
         </div>
@@ -181,7 +188,14 @@ export default function GlobalHeader() {
           mode="horizontal"
           selectedKeys={[getSelectedKey()]}
           items={menuItems}
-          style={{ border: 'none', minWidth: 0 }}
+          style={{ 
+            border: 'none', 
+            minWidth: 0,
+            background: 'transparent',
+            fontSize: '15px',
+            flex: 1,
+          }}
+          overflowedIndicator={null}
         />
       </div>
       
@@ -200,18 +214,45 @@ export default function GlobalHeader() {
         ) : isLoggedIn() ? (
           // 已登录用户显示用户信息和下拉菜单
           <Dropdown menu={userMenu} placement="bottomRight">
-            <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} src={loginUser.userAvatar} />
-              <span>{loginUser.userName}</span>
+            <Space style={{ 
+              cursor: 'pointer',
+              padding: '4px 12px',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.8'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1'
+            }}
+            >
+              <Avatar icon={<UserOutlined />} src={loginUser.userAvatar} style={{ background: '#0EA5E9' }} />
+              <span style={{ fontWeight: 500, color: '#333' }}>{loginUser.userName}</span>
             </Space>
           </Dropdown>
         ) : (
           // 未登录用户显示登录注册按钮
-          <Space>
-            <Button type="text" onClick={() => router.push('/user/login')}>
+          <Space size="middle">
+            <Button 
+              type="text" 
+              onClick={() => router.push('/user/login')}
+              style={{ 
+                fontWeight: 500,
+                color: '#0EA5E9',
+              }}
+            >
               登录
             </Button>
-            <Button type="primary" onClick={() => router.push('/user/register')}>
+            <Button 
+              type="primary" 
+              onClick={() => router.push('/user/register')}
+              style={{
+                background: 'linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)',
+                border: 'none',
+                fontWeight: 500,
+                boxShadow: '0 2px 8px rgba(14, 165, 233, 0.3)',
+              }}
+            >
               注册
             </Button>
           </Space>

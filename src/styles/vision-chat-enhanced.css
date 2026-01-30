@@ -1,0 +1,206 @@
+/* 视觉聊天界面增强样式 - 与文本聊天完全一致 */
+
+/* 视觉聊天容器 - 与文本聊天相同的背景 */
+.vision-chat-container {
+  background: linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 50%, #F0FDFA 100%);
+  position: relative;
+  min-height: 100vh;
+}
+
+/* 背景装饰 - 与文本聊天相同 */
+.vision-chat-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.05) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* 消息气泡 - 与文本聊天完全一致 */
+.vision-message-bubble-user {
+  background: #F3F4F6 !important;
+  color: #1F2937 !important;
+  border: 1px solid #E5E7EB !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 18px 18px 4px 18px !important;
+  transition: all 0.3s ease;
+  padding: 12px 16px;
+  max-width: 70%;
+}
+
+.vision-message-bubble-user:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.vision-message-bubble-ai {
+  background: white !important;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 18px 18px 18px 4px !important;
+  transition: all 0.3s ease;
+  padding: 12px 16px;
+  max-width: 70%;
+}
+
+.vision-message-bubble-ai:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 图片上传区域 */
+.image-upload-area {
+  border: 2px dashed #0EA5E9;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  background: white;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.image-upload-area:hover {
+  border-color: #38BDF8;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.03) 0%, rgba(56, 189, 248, 0.03) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+}
+
+/* 上传图标 */
+.upload-icon {
+  font-size: 48px;
+  color: #0EA5E9;
+  margin-bottom: 16px;
+}
+
+/* 图片预览卡片 */
+.image-preview-card {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  background: white;
+  border: 1px solid #E5E7EB;
+}
+
+.image-preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.image-preview-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 图片操作按钮 */
+.image-action-buttons {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.image-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-action-btn:hover {
+  background: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #0EA5E9;
+}
+
+/* 输入框增强 - 与文本聊天一致 */
+.vision-chat-input-enhanced {
+  background: white;
+  border: 2px solid #E5E7EB;
+  border-radius: 24px;
+  padding: 12px 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.vision-chat-input-enhanced:hover {
+  border-color: #0EA5E9;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+}
+
+.vision-chat-input-enhanced:focus-within {
+  border-color: #0EA5E9;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.2);
+}
+
+/* 发送按钮增强 - 与文本聊天一致 */
+.vision-send-button-enhanced {
+  background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%);
+  border: none;
+  border-radius: 20px;
+  height: 40px;
+  padding: 0 24px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+  transition: all 0.3s ease;
+}
+
+.vision-send-button-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
+}
+
+.vision-send-button-enhanced:active {
+  transform: translateY(0);
+}
+
+/* 滚动条美化 - 与文本聊天一致 */
+.vision-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vision-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vision-chat-messages::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%);
+  border-radius: 3px;
+}
+
+.vision-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .image-upload-area {
+    padding: 30px 20px;
+  }
+
+  .upload-icon {
+    font-size: 40px;
+  }
+
+  .vision-message-bubble-user,
+  .vision-message-bubble-ai {
+    max-width: 85%;
+  }
+}
+
